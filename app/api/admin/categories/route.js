@@ -1,14 +1,63 @@
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import fs from "fs/promises";
-import path from "path";
+import { put, del } from "@vercel/blob";
 
 async function getDatabase() {
   const client = await clientPromise;
   return client.db("crackncrunch");
 }
 
+// ===============================
+// Upload image to Vercel Blob
+// ===============================
+async function saveImage(image) {
+  if (
+    !image ||
+    typeof image === "string" ||
+    image.size === 0
+  ) {
+    return null;
+  }
+
+  const safeName = image.name.replace(
+    /[^a-zA-Z0-9.-]/g,
+    "-"
+  );
+
+  const fileName = `categories/category-${Date.now()}-${safeName}`;
+
+  const blob = await put(fileName, image, {
+    access: "public",
+  });
+
+  return blob.url;
+}
+
+// ===============================
+// Delete image from Vercel Blob
+// ===============================
+async function deleteImage(imageUrl) {
+  if (!imageUrl) {
+    return;
+  }
+
+  try {
+    // New Vercel Blob URL
+    if (imageUrl.startsWith("https://")) {
+      await del(imageUrl);
+    }
+  } catch (error) {
+    console.log(
+      "CATEGORY IMAGE DELETE SKIPPED:",
+      imageUrl,
+      error
+    );
+  }
+}
+
+// ===============================
 // GET - Get all categories
+// ===============================
 export async function GET() {
   try {
     const db = await getDatabase();
@@ -24,7 +73,10 @@ export async function GET() {
       categories,
     });
   } catch (error) {
-    console.error("GET CATEGORIES ERROR:", error);
+    console.error(
+      "GET CATEGORIES ERROR:",
+      error
+    );
 
     return Response.json(
       {
@@ -36,7 +88,9 @@ export async function GET() {
   }
 }
 
+// ===============================
 // POST - Add category
+// ===============================
 export async function POST(request) {
   try {
     const formData = await request.formData();
@@ -54,7 +108,11 @@ export async function POST(request) {
       );
     }
 
-    if (!image || typeof image === "string" || image.size === 0) {
+    if (
+      !image ||
+      typeof image === "string" ||
+      image.size === 0
+    ) {
       return Response.json(
         {
           success: false,
@@ -83,41 +141,20 @@ export async function POST(request) {
       );
     }
 
-    // Create upload folder
-    const uploadDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "categories"
-    );
+    // Upload image
+    const imageUrl = await saveImage(image);
 
-    await fs.mkdir(uploadDir, {
-      recursive: true,
-    });
+    if (!imageUrl) {
+      return Response.json(
+        {
+          success: false,
+          message: "Failed to upload category image",
+        },
+        { status: 500 }
+      );
+    }
 
-    // Save image
-    const extension = path.extname(image.name) || ".jpg";
-
-    const fileName =
-      "category-" +
-      Date.now() +
-      extension;
-
-    const filePath = path.join(
-      uploadDir,
-      fileName
-    );
-
-    const buffer = Buffer.from(
-      await image.arrayBuffer()
-    );
-
-    await fs.writeFile(filePath, buffer);
-
-    const imageUrl =
-      "/uploads/categories/" + fileName;
-
-    // Save category
+    // Save category in MongoDB
     const result = await db
       .collection("categories")
       .insertOne({
@@ -137,7 +174,10 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error("ADD CATEGORY ERROR:", error);
+    console.error(
+      "ADD CATEGORY ERROR:",
+      error
+    );
 
     return Response.json(
       {
@@ -149,7 +189,9 @@ export async function POST(request) {
   }
 }
 
+// ===============================
 // PUT - Edit category
+// ===============================
 export async function PUT(request) {
   try {
     const formData = await request.formData();
@@ -163,6 +205,16 @@ export async function PUT(request) {
         {
           success: false,
           message: "Category data is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!ObjectId.isValid(id)) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid category ID",
         },
         { status: 400 }
       );
@@ -191,64 +243,39 @@ export async function PUT(request) {
       updatedAt: new Date(),
     };
 
+    // ===============================
     // If new image selected
+    // ===============================
     if (
       image &&
       typeof image !== "string" &&
       image.size > 0
     ) {
-      const uploadDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        "categories"
-      );
+      // Upload new image
+      const newImageUrl = await saveImage(image);
 
-      await fs.mkdir(uploadDir, {
-        recursive: true,
-      });
-
-      const extension =
-        path.extname(image.name) || ".jpg";
-
-      const fileName =
-        "category-" +
-        Date.now() +
-        extension;
-
-      const filePath = path.join(
-        uploadDir,
-        fileName
-      );
-
-      const buffer = Buffer.from(
-        await image.arrayBuffer()
-      );
-
-      await fs.writeFile(
-        filePath,
-        buffer
-      );
-
-      updateData.image =
-        "/uploads/categories/" + fileName;
-
-      // Delete old image
-      if (category.image) {
-        const oldImagePath = path.join(
-          process.cwd(),
-          "public",
-          category.image
+      if (!newImageUrl) {
+        return Response.json(
+          {
+            success: false,
+            message: "Failed to upload new image",
+          },
+          { status: 500 }
         );
+      }
 
-        try {
-          await fs.unlink(oldImagePath);
-        } catch {
-          // Old image may not exist
-        }
+      updateData.image = newImageUrl;
+
+      // Delete old Vercel Blob image
+      if (
+        category.image &&
+        category.image.startsWith("https://")
+      ) {
+        await deleteImage(category.image);
       }
     }
 
+    // Update MongoDB
     await db
       .collection("categories")
       .updateOne(
@@ -265,7 +292,10 @@ export async function PUT(request) {
       message: "Category updated successfully",
     });
   } catch (error) {
-    console.error("UPDATE CATEGORY ERROR:", error);
+    console.error(
+      "UPDATE CATEGORY ERROR:",
+      error
+    );
 
     return Response.json(
       {
@@ -277,7 +307,9 @@ export async function PUT(request) {
   }
 }
 
+// ===============================
 // DELETE - Delete category
+// ===============================
 export async function DELETE(request) {
   try {
     const { id } = await request.json();
@@ -287,6 +319,16 @@ export async function DELETE(request) {
         {
           success: false,
           message: "Category ID is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!ObjectId.isValid(id)) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid category ID",
         },
         { status: 400 }
       );
@@ -310,21 +352,15 @@ export async function DELETE(request) {
       );
     }
 
-    // Delete image from uploads folder
-    if (category.image) {
-      const imagePath = path.join(
-        process.cwd(),
-        "public",
-        category.image
-      );
-
-      try {
-        await fs.unlink(imagePath);
-      } catch {
-        // Image may not exist
-      }
+    // Delete image from Vercel Blob
+    if (
+      category.image &&
+      category.image.startsWith("https://")
+    ) {
+      await deleteImage(category.image);
     }
 
+    // Delete category from MongoDB
     await db
       .collection("categories")
       .deleteOne({
@@ -336,7 +372,10 @@ export async function DELETE(request) {
       message: "Category deleted successfully",
     });
   } catch (error) {
-    console.error("DELETE CATEGORY ERROR:", error);
+    console.error(
+      "DELETE CATEGORY ERROR:",
+      error
+    );
 
     return Response.json(
       {
