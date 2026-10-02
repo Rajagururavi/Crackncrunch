@@ -1,32 +1,27 @@
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { writeFile, mkdir, unlink } from "fs/promises";
-import path from "path";
+import { put, del } from "@vercel/blob";
 async function saveImage(image, index) {
   if (!image || image.size === 0) {
     return null;
   }
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
-  await mkdir(uploadDir, {recursive: true,});
-  const fileName = `${Date.now()}-${index}-${image.name.replace(/[^a-zA-Z0-9.-]/g, "-")}`;
-  const filePath = path.join(uploadDir, fileName);
-  const bytes = await image.arrayBuffer();
-  await writeFile(filePath, Buffer.from(bytes));
-  return `/uploads/products/${fileName}`;
+  const safeName = image.name.replace(/[^a-zA-Z0-9.-]/g, "-");
+  const fileName = `products/${Date.now()}-${index}-${safeName}`;
+  const blob = await put(fileName, image, {
+    access: "public",
+  });
+  return blob.url;
 }
 async function deleteImage(imageUrl) {
   if (!imageUrl) {
     return;
   }
   try {
-    const filePath = path.join(
-      process.cwd(),
-      "public",
-      imageUrl
-    );
-    await unlink(filePath);
+    if (imageUrl.startsWith("https://")) {
+      await del(imageUrl);
+    }
   } catch (error) {
-    console.log("IMAGE DELETE SKIPPED:", imageUrl);
+    console.log("IMAGE DELETE SKIPPED:", imageUrl, error);
   }
 }
 export async function GET() {
@@ -67,16 +62,18 @@ export async function POST(request) {
       return Response.json(
         {
           success: false,
-          message:"Please fill all required fields",
+          message: "Please fill all required fields",
         },
         { status: 400 }
       );
     }
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const existingProduct = await db.collection("products").findOne({
-        productName:productName.trim(),
-    });
+    const existingProduct = await db
+      .collection("products")
+      .findOne({
+        productName: productName.trim(),
+      });
     if (existingProduct) {
       return Response.json(
         {
@@ -105,7 +102,7 @@ export async function POST(request) {
       category: category.trim(),
       brand: brand.trim(),
       description: description?.trim() || "",
-      price: Number(price),
+      price: Number(price), 
       offerPrice: offerPrice ? Number(offerPrice) : null,
       stockStatus: stockStatus.trim(),
       images,
@@ -117,6 +114,7 @@ export async function POST(request) {
       success: true,
       message: "Product added successfully",
       productId: result.insertedId.toString(),
+      images,
     });
   } catch (error) {
     console.error("PRODUCT INSERT ERROR:", error);
@@ -124,6 +122,7 @@ export async function POST(request) {
       {
         success: false,
         message: "Failed to add product",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       },
       { status: 500 }
     );
@@ -164,7 +163,7 @@ export async function PUT(request) {
     }
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const existingProduct = await db.collection("products").findOne({_id: new ObjectId(productId), });
+    const existingProduct = await db.collection("products").findOne({_id: new ObjectId(productId),});
     if (!existingProduct) {
       return Response.json(
         {
@@ -181,7 +180,7 @@ export async function PUT(request) {
       brand: brand.trim(),
       description: description?.trim() || "",
       price: Number(price),
-      offerPrice: offerPrice ? Number(offerPrice): null,
+      offerPrice: offerPrice ? Number(offerPrice) : null,
       stockStatus: stockStatus.trim(),
       updatedAt: new Date(),
     };
@@ -209,25 +208,25 @@ export async function PUT(request) {
     }
     updateData.images = newImages;
     await db.collection("products").updateOne(
-        {
-          _id: new ObjectId(productId),
-        },
-        {
-          $set: updateData,
-        }
-      );
+      {
+        _id: new ObjectId(productId),
+      },
+      {
+        $set: updateData,
+      }
+    );
     return Response.json({
       success: true,
       message: "Product updated successfully",
+      images: newImages,
     });
   } catch (error) {
-    console.error(
-      "PRODUCT UPDATE ERROR:", error
-    );
+    console.error("PRODUCT UPDATE ERROR:", error);
     return Response.json(
       {
         success: false,
         message: "Failed to update product",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       },
       { status: 500 }
     );
@@ -235,7 +234,7 @@ export async function PUT(request) {
 }
 export async function DELETE(request) {
   try {
-    const {productId,} = await request.json();
+    const { productId } = await request.json();
     if (!productId) {
       return Response.json(
         {
@@ -256,9 +255,7 @@ export async function DELETE(request) {
     }
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const product = await db.collection("products").findOne({
-        _id:new ObjectId(productId),
-    });
+    const product = await db.collection("products").findOne({_id: new ObjectId(productId), });
     if (!product) {
       return Response.json(
         {
@@ -273,7 +270,7 @@ export async function DELETE(request) {
         await deleteImage(image);
       }
     }
-    await db.collection("products").deleteOne({_id:new ObjectId(productId),});
+    await db.collection("products").deleteOne({_id: new ObjectId(productId), });
     return Response.json({
       success: true,
       message: "Product deleted successfully",
