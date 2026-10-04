@@ -14,68 +14,91 @@ export default function HomePage() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickProduct, setQuickProduct] = useState(null);
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickQuantity, setQuickQuantity] = useState(1);
   const [quickWeight, setQuickWeight] = useState("");
-  const [selectedOptionsProduct, setSelectedOptionsProduct] = useState(null);
+
+  const [selectedOptionsProduct, setSelectedOptionsProduct] =
+    useState(null);
+
   const [selectedWeights, setSelectedWeights] = useState({});
   const [wishlistIds, setWishlistIds] = useState([]);
 
+  /* =========================================================
+     LOAD HOME DATA
+  ========================================================= */
+
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  const loadHomeData = async () => {
-    try {
-      const response = await fetch("/api/home", {
-        cache: "no-store",
-      });
+    const loadHomeData = async () => {
+      try {
+        setLoading(true);
 
-      if (!response.ok) {
-        throw new Error("Failed to load home data");
-      }
+        const response = await fetch("/api/home", {
+          cache: "no-store",
+        });
 
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error("Failed to load home data");
+        }
 
-      if (cancelled) {
-        return;
-      }
+        const data = await response.json();
 
-      if (data.success) {
-        setCategories(data.categories || []);
-        setBrands(data.brands || []);
-      } else {
+        if (cancelled) {
+          return;
+        }
+
+        if (data?.success) {
+          setCategories(
+            Array.isArray(data.categories)
+              ? data.categories
+              : []
+          );
+
+          setBrands(
+            Array.isArray(data.brands)
+              ? data.brands
+              : []
+          );
+        } else {
+          setCategories([]);
+          setBrands([]);
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Home data error:", error);
+
         setCategories([]);
         setBrands([]);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    };
 
-      setLoading(false);
-    } catch (error) {
-      if (cancelled) {
-        return;
-      }
-
-      console.error("Home data error:", error);
-      setCategories([]);
-      setBrands([]);
-      setLoading(false);
-    }
-  };
-
-  loadHomeData();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
-  useEffect(() => {
     loadHomeData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  /* =========================================================
+     BANNER SLIDER
+  ========================================================= */
+
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (banners.length <= 1) {
+      return;
+    }
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) =>
@@ -83,7 +106,9 @@ export default function HomePage() {
       );
     }, 5000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, [banners.length]);
 
   const nextSlide = () => {
@@ -97,6 +122,10 @@ export default function HomePage() {
       prev <= 0 ? banners.length - 1 : prev - 1
     );
   };
+
+  /* =========================================================
+     IMAGE HELPER
+  ========================================================= */
 
   const getImage = (image, folder = "") => {
     if (!image) {
@@ -122,6 +151,10 @@ export default function HomePage() {
     return image;
   };
 
+  /* =========================================================
+     PRODUCT HELPERS
+  ========================================================= */
+
   const getProductId = (product) => {
     return product?._id || product?.id || "";
   };
@@ -139,13 +172,20 @@ export default function HomePage() {
   };
 
   const getProductPrice = (product) => {
-    const offerPrice = getProductOfferPrice(product);
+    const originalPrice =
+      getProductOriginalPrice(product);
 
-    if (offerPrice > 0) {
+    const offerPrice =
+      getProductOfferPrice(product);
+
+    if (
+      offerPrice > 0 &&
+      offerPrice < originalPrice
+    ) {
       return offerPrice;
     }
 
-    return getProductOriginalPrice(product);
+    return originalPrice;
   };
 
   const getProductImage1 = (product) => {
@@ -153,7 +193,7 @@ export default function HomePage() {
       Array.isArray(product?.images) &&
       product.images.length > 0
     ) {
-      return getImage(product.images[0]);
+      return getImage(product.images[0], "products");
     }
 
     return "";
@@ -164,7 +204,7 @@ export default function HomePage() {
       Array.isArray(product?.images) &&
       product.images.length > 1
     ) {
-      return getImage(product.images[1]);
+      return getImage(product.images[1], "products");
     }
 
     return "";
@@ -175,14 +215,16 @@ export default function HomePage() {
       Array.isArray(product?.images) &&
       product.images.length > 2
     ) {
-      return getImage(product.images[2]);
+      return getImage(product.images[2], "products");
     }
 
     return getProductImage1(product);
   };
 
   const isProductActive = (product) => {
-    const status = String(product?.stockStatus || "")
+    const status = String(
+      product?.stockStatus || ""
+    )
       .trim()
       .toLowerCase();
 
@@ -192,6 +234,10 @@ export default function HomePage() {
       status === "in stock"
     );
   };
+
+  /* =========================================================
+     WEIGHT / PRICE
+  ========================================================= */
 
   const getWeightMultiplier = (weight) => {
     if (weight === "250g") {
@@ -215,15 +261,21 @@ export default function HomePage() {
     return basePrice * getWeightMultiplier(weight);
   };
 
+  /* =========================================================
+     PRODUCT OPTIONS
+  ========================================================= */
+
   const openProductOptions = (product, event) => {
     event.preventDefault();
     event.stopPropagation();
+
+    const productId = getProductId(product);
 
     setSelectedOptionsProduct(product);
 
     setSelectedWeights((prev) => ({
       ...prev,
-      [getProductId(product)]: "",
+      [productId]: "",
     }));
   };
 
@@ -236,23 +288,35 @@ export default function HomePage() {
     setSelectedOptionsProduct(null);
   };
 
-  const handleWeightChange = (productId, weight) => {
+  const handleWeightChange = (
+    productId,
+    weight
+  ) => {
     setSelectedWeights((prev) => ({
       ...prev,
       [productId]: weight,
     }));
   };
 
+  /* =========================================================
+     ADD TO CART
+  ========================================================= */
+
   const addToCart = (product) => {
     const productId = getProductId(product);
-    const weight = selectedWeights[productId];
+
+    const weight =
+      selectedWeights[productId];
 
     if (!weight) {
       alert("Please select a weight.");
       return;
     }
 
-    const price = getWeightPrice(product, weight);
+    const price = getWeightPrice(
+      product,
+      weight
+    );
 
     const cartItem = {
       product_id: productId,
@@ -264,44 +328,75 @@ export default function HomePage() {
     };
 
     try {
-      const savedCart = localStorage.getItem("cart");
+      const savedCart =
+        localStorage.getItem("cart");
 
       let cart = [];
 
       if (savedCart) {
-        cart = JSON.parse(savedCart);
+        try {
+          const parsedCart =
+            JSON.parse(savedCart);
+
+          if (Array.isArray(parsedCart)) {
+            cart = parsedCart;
+          }
+        } catch {
+          cart = [];
+        }
       }
 
-      const existingIndex = cart.findIndex(
-        (item) =>
-          String(item.product_id) === String(productId) &&
-          item.weight === weight
-      );
+      const existingIndex =
+        cart.findIndex(
+          (item) =>
+            String(item.product_id) ===
+              String(productId) &&
+            item.weight === weight
+        );
 
       if (existingIndex !== -1) {
         cart[existingIndex].quantity =
-          Number(cart[existingIndex].quantity || 0) + 1;
+          Number(
+            cart[existingIndex].quantity || 0
+          ) + 1;
 
         cart[existingIndex].final_price =
-          Number(price) * Number(cart[existingIndex].quantity);
+          Number(price) *
+          Number(cart[existingIndex].quantity);
       } else {
         cart.push(cartItem);
       }
 
-      localStorage.setItem("cart", JSON.stringify(cart));
+      localStorage.setItem(
+        "cart",
+        JSON.stringify(cart)
+      );
 
-      sessionStorage.setItem("openCartAfterRefresh", "true");
+      sessionStorage.setItem(
+        "openCartAfterRefresh",
+        "true"
+      );
 
-      window.dispatchEvent(new Event("cartUpdated"));
+      window.dispatchEvent(
+        new Event("cartUpdated")
+      );
 
       window.location.reload();
     } catch (error) {
-      console.error("Add cart error:", error);
+      console.error(
+        "Add cart error:",
+        error
+      );
     }
   };
 
+  /* =========================================================
+     QUICK VIEW
+  ========================================================= */
+
   const openQuickView = async (product) => {
-    const productId = getProductId(product);
+    const productId =
+      getProductId(product);
 
     setQuickViewOpen(true);
     setQuickLoading(true);
@@ -310,23 +405,36 @@ export default function HomePage() {
     setQuickWeight("");
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `/api/products/${productId}`,
+        {
+          cache: "no-store",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Product not found");
+        throw new Error(
+          "Product not found"
+        );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
-      if (data.success && data.product) {
+      if (
+        data?.success &&
+        data?.product
+      ) {
         setQuickProduct(data.product);
       } else {
         setQuickProduct(product);
       }
     } catch (error) {
-      console.error("Quick view error:", error);
+      console.error(
+        "Quick view error:",
+        error
+      );
+
       setQuickProduct(product);
     } finally {
       setQuickLoading(false);
@@ -340,7 +448,9 @@ export default function HomePage() {
     setQuickWeight("");
   };
 
-  const changeQuickQuantity = (change) => {
+  const changeQuickQuantity = (
+    change
+  ) => {
     setQuickQuantity((prev) => {
       const next = prev + change;
 
@@ -353,16 +463,22 @@ export default function HomePage() {
   };
 
   const getQuickViewTotal = () => {
-    if (!quickProduct || !quickWeight) {
+    if (
+      !quickProduct ||
+      !quickWeight
+    ) {
       return 0;
     }
 
-    const singlePrice = getWeightPrice(
-      quickProduct,
-      quickWeight
-    );
+    const singlePrice =
+      getWeightPrice(
+        quickProduct,
+        quickWeight
+      );
 
-    return singlePrice * quickQuantity;
+    return (
+      singlePrice * quickQuantity
+    );
   };
 
   const addQuickViewToCart = () => {
@@ -375,77 +491,126 @@ export default function HomePage() {
       return;
     }
 
-    const price = getWeightPrice(
-      quickProduct,
-      quickWeight
-    );
+    const price =
+      getWeightPrice(
+        quickProduct,
+        quickWeight
+      );
 
-    const productId = getProductId(quickProduct);
+    const productId =
+      getProductId(quickProduct);
 
     const cartItem = {
       product_id: productId,
-      product_title: getProductTitle(quickProduct),
-      product_image: getProductImage1(quickProduct),
+      product_title:
+        getProductTitle(
+          quickProduct
+        ),
+      product_image:
+        getProductImage1(
+          quickProduct
+        ),
       weight: quickWeight,
       quantity: quickQuantity,
-      final_price: price * quickQuantity,
+      final_price:
+        price * quickQuantity,
     };
 
     try {
-      const savedCart = localStorage.getItem("cart");
+      const savedCart =
+        localStorage.getItem("cart");
 
       let cart = [];
 
       if (savedCart) {
-        cart = JSON.parse(savedCart);
+        try {
+          const parsedCart =
+            JSON.parse(savedCart);
+
+          if (Array.isArray(parsedCart)) {
+            cart = parsedCart;
+          }
+        } catch {
+          cart = [];
+        }
       }
 
-      const existingIndex = cart.findIndex(
-        (item) =>
-          String(item.product_id) === String(productId) &&
-          item.weight === quickWeight
-      );
+      const existingIndex =
+        cart.findIndex(
+          (item) =>
+            String(item.product_id) ===
+              String(productId) &&
+            item.weight ===
+              quickWeight
+        );
 
       if (existingIndex !== -1) {
         cart[existingIndex].quantity =
-          Number(cart[existingIndex].quantity || 0) +
-          quickQuantity;
+          Number(
+            cart[existingIndex].quantity ||
+              0
+          ) + quickQuantity;
 
         cart[existingIndex].final_price =
-          price * Number(cart[existingIndex].quantity);
+          price *
+          Number(
+            cart[existingIndex].quantity
+          );
       } else {
         cart.push(cartItem);
       }
 
-      localStorage.setItem("cart", JSON.stringify(cart));
+      localStorage.setItem(
+        "cart",
+        JSON.stringify(cart)
+      );
 
       sessionStorage.setItem(
         "openCartAfterRefresh",
         "true"
       );
 
-      window.dispatchEvent(new Event("cartUpdated"));
+      window.dispatchEvent(
+        new Event("cartUpdated")
+      );
 
       window.location.reload();
     } catch (error) {
-      console.error("Quick cart error:", error);
+      console.error(
+        "Quick cart error:",
+        error
+      );
     }
   };
 
+  /* =========================================================
+     WISHLIST
+  ========================================================= */
+
   const isWishlist = (productId) => {
-    return wishlistIds.includes(String(productId));
+    return wishlistIds.includes(
+      String(productId)
+    );
   };
 
-  const wishlistClicked = async (product, event) => {
+  const wishlistClicked = async (
+    product,
+    event
+  ) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const productId = String(getProductId(product));
+    const productId = String(
+      getProductId(product)
+    );
 
-    const savedUser = localStorage.getItem("user");
+    const savedUser =
+      localStorage.getItem("user");
 
     if (!savedUser) {
-      alert("Please login to add products to wishlist.");
+      alert(
+        "Please login to add products to wishlist."
+      );
       return;
     }
 
@@ -459,14 +624,19 @@ export default function HomePage() {
     }
 
     if (!user?.logged_in) {
-      alert("Please login to add products to wishlist.");
+      alert(
+        "Please login to add products to wishlist."
+      );
       return;
     }
 
-    if (wishlistIds.includes(productId)) {
-      const updated = wishlistIds.filter(
-        (id) => id !== productId
-      );
+    if (
+      wishlistIds.includes(productId)
+    ) {
+      const updated =
+        wishlistIds.filter(
+          (id) => id !== productId
+        );
 
       setWishlistIds(updated);
 
@@ -474,7 +644,8 @@ export default function HomePage() {
         await fetch("/api/wishlist", {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             productId,
@@ -499,7 +670,8 @@ export default function HomePage() {
       await fetch("/api/wishlist", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type":
+            "application/json",
         },
         body: JSON.stringify({
           productId,
@@ -513,20 +685,37 @@ export default function HomePage() {
     }
   };
 
+  /* =========================================================
+     COMPARE
+  ========================================================= */
+
   const compareClicked = (event) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const element = event.currentTarget;
+    const element =
+      event.currentTarget;
 
-    if (!element.classList.contains("compare-added")) {
-      element.classList.add("compare-added");
+    if (
+      !element.classList.contains(
+        "compare-added"
+      )
+    ) {
+      element.classList.add(
+        "compare-added"
+      );
 
-      const icon = element.querySelector("i");
+      const icon =
+        element.querySelector("i");
 
       if (icon) {
-        icon.classList.remove("fa-exchange");
-        icon.classList.add("fa-check");
+        icon.classList.remove(
+          "fa-exchange"
+        );
+
+        icon.classList.add(
+          "fa-check"
+        );
       }
 
       element.setAttribute(
@@ -536,8 +725,16 @@ export default function HomePage() {
     }
   };
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
     <>
+      {/* =====================================================
+          HERO BANNER
+      ===================================================== */}
+
       <div className="hero-banner">
         <div
           className="banner-slider"
@@ -547,13 +744,17 @@ export default function HomePage() {
             }%)`,
           }}
         >
-          {banners.map((banner, index) => (
-            <img
-              key={index}
-              src={banner}
-              alt={`Banner ${index + 1}`}
-            />
-          ))}
+          {banners.map(
+            (banner, index) => (
+              <img
+                key={index}
+                src={banner}
+                alt={`Banner ${
+                  index + 1
+                }`}
+              />
+            )
+          )}
         </div>
 
         <button
@@ -573,6 +774,10 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* =====================================================
+          CATEGORIES
+      ===================================================== */}
+
       <div className="category-section">
         <h1 className="section-title">
           Our Categories
@@ -584,53 +789,60 @@ export default function HomePage() {
           </div>
         ) : categories.length > 0 ? (
           <div className="category-row">
-            {categories.map((category, index) => {
-              const title =
-                category.name ||
-                category.cat_title ||
-                category.title ||
-                "";
+            {categories.map(
+              (category, index) => {
+                const title =
+                  category?.name ||
+                  category?.cat_title ||
+                  category?.title ||
+                  "";
 
-              const image = getImage(
-                category.image ||
-                  category.cat_image ||
-                  "",
-                "categories"
-              );
+                const image =
+                  getImage(
+                    category?.image ||
+                      category?.cat_image ||
+                      "",
+                    "categories"
+                  );
 
-              return (
-                <div
-                  className="category-column"
-                  key={
-                    category._id ||
-                    category.id ||
-                    index
-                  }
-                >
-                  <div className="category-card">
-                    <Link
-                      href={`/shop?category=${encodeURIComponent(
-                        title
-                      )}`}
-                    >
-                      {image && (
-                        <img
-                          src={image}
-                          className="category-img"
-                          alt={title}
-                        />
-                      )}
-                    </Link>
+                return (
+                  <div
+                    className="category-column"
+                    key={
+                      category?._id ||
+                      category?.id ||
+                      index
+                    }
+                  >
+                    <div className="category-card">
+                      <Link
+                        href={`/shop?category=${encodeURIComponent(
+                          title
+                        )}`}
+                      >
+                        {image && (
+                          <img
+                            src={image}
+                            className="category-img"
+                            alt={title}
+                            onError={(event) => {
+                              event.currentTarget.style.display =
+                                "none";
+                            }}
+                          />
+                        )}
+                      </Link>
 
-                    <div className="category-content">
-                      <h3 className="category-title">
-                        {title}
-                      </h3>
+                      <div className="category-content">
+                        <h3 className="category-title">
+                          {title}
+                        </h3>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         ) : (
           <div className="no-product-msg">
@@ -639,402 +851,474 @@ export default function HomePage() {
         )}
       </div>
 
-      {brands.map((brand, brandIndex) => {
-        const brandTitle =
-          brand.brandName ||
-          brand.name ||
-          brand.brand_title ||
-          brand.title ||
-          "";
+      {/* =====================================================
+          BRANDS + PRODUCTS
+      ===================================================== */}
 
-        const brandImage = getImage(
-          brand.image ||
-            brand.brand_image ||
-            "",
-          "brands"
-        );
+      {brands.map(
+        (brand, brandIndex) => {
+          const brandTitle =
+            brand?.brandName ||
+            brand?.name ||
+            brand?.brand_title ||
+            brand?.title ||
+            "";
 
-        const products = brand.products || [];
+          const brandImage =
+            getImage(
+              brand?.image ||
+                brand?.brand_image ||
+                "",
+              "brands"
+            );
 
-        return (
-          <div
-            key={
-              brand._id ||
-              brand.id ||
-              brandIndex
-            }
-          >
-            {brandImage && (
-              <div className="nutrition-banner">
-                <img
-                  src={brandImage}
-                  alt={brandTitle}
-                />
-              </div>
-            )}
+          const products =
+            Array.isArray(
+              brand?.products
+            )
+              ? brand.products
+              : [];
 
-            <div className="premium-section">
-              <div className="premium-header">
-                <h2 className="premium-main-title">
-                  {brandTitle}
-                </h2>
+          return (
+            <div
+              key={
+                brand?._id ||
+                brand?.id ||
+                brandIndex
+              }
+            >
+              {brandImage && (
+                <div className="nutrition-banner">
+                  <img
+                    src={brandImage}
+                    alt={brandTitle}
+                    onError={(event) => {
+                      event.currentTarget.style.display =
+                        "none";
+                    }}
+                  />
+                </div>
+              )}
 
-                <Link
-                  href={`/shop?brand=${encodeURIComponent(
-                    brandTitle
-                  )}`}
-                  className="premium-view-btn"
-                >
-                  View All
-                </Link>
-              </div>
+              <div className="premium-section">
+                <div className="premium-header">
+                  <h2 className="premium-main-title">
+                    {brandTitle}
+                  </h2>
 
-              {products.length > 0 ? (
-                <div className="premium-grid">
-                  {products.map(
-                    (product, productIndex) => {
-                      const productId =
-                        getProductId(product);
+                  <Link
+                    href={`/shop?brand=${encodeURIComponent(
+                      brandTitle
+                    )}`}
+                    className="premium-view-btn"
+                  >
+                    View All
+                  </Link>
+                </div>
 
-                      const title =
-                        getProductTitle(product);
+                {products.length >
+                0 ? (
+                  <div className="premium-grid">
+                    {products.map(
+                      (
+                        product,
+                        productIndex
+                      ) => {
+                        const productId =
+                          getProductId(
+                            product
+                          );
 
-                      const image1 =
-                        getProductImage1(product);
+                        const title =
+                          getProductTitle(
+                            product
+                          );
 
-                      const image2 =
-                        getProductImage2(product);
+                        const image1 =
+                          getProductImage1(
+                            product
+                          );
 
-                      const active =
-                        isProductActive(product);
+                        const image2 =
+                          getProductImage2(
+                            product
+                          );
 
-                      const selectedWeight =
-                        selectedWeights[
-                          productId
-                        ] || "";
+                        const active =
+                          isProductActive(
+                            product
+                          );
 
-                      const originalPrice =
-                        getProductOriginalPrice(
-                          product
-                        );
+                        const selectedWeight =
+                          selectedWeights[
+                            productId
+                          ] || "";
 
-                      const offerPrice =
-                        getProductOfferPrice(
-                          product
-                        );
+                        const originalPrice =
+                          getProductOriginalPrice(
+                            product
+                          );
 
-                      const optionPrice =
-                        selectedWeight
-                          ? getWeightPrice(
-                              product,
-                              selectedWeight
-                            )
-                          : getProductPrice(
-                              product
-                            );
+                        const offerPrice =
+                          getProductOfferPrice(
+                            product
+                          );
 
-                      return (
-                        <div
-                          className="premium-column"
-                          key={
-                            productId ||
-                            productIndex
-                          }
-                        >
-                          <div className="premium-card">
-                            <div className="image-wrapper">
-                              {active ? (
-                                <span className="sale-badge sale">
-                                  SALE
-                                </span>
-                              ) : (
-                                <span className="sale-badge unavailable">
-                                  CURRENTLY UNAVAILABLE
-                                </span>
-                              )}
+                        const optionPrice =
+                          selectedWeight
+                            ? getWeightPrice(
+                                product,
+                                selectedWeight
+                              )
+                            : getProductPrice(
+                                product
+                              );
 
-                              <Link
-                                href={`/shop?product=${encodeURIComponent(
-                                  productId
-                                )}`}
-                                className="product-image-link"
-                              >
-                                {image1 && (
-                                  <img
-                                    src={image1}
-                                    className="premium-image image1"
-                                    alt={title}
-                                    onError={(e) => {
-                                      e.currentTarget.style.display =
-                                        "none";
-                                    }}
-                                  />
+                        return (
+                          <div
+                            className="premium-column"
+                            key={
+                              productId ||
+                              productIndex
+                            }
+                          >
+                            <div className="premium-card">
+                              <div className="image-wrapper">
+                                {active ? (
+                                  <span className="sale-badge sale">
+                                    SALE
+                                  </span>
+                                ) : (
+                                  <span className="sale-badge unavailable">
+                                    CURRENTLY UNAVAILABLE
+                                  </span>
                                 )}
 
-                                {image2 &&
-                                  image2 !==
-                                    image1 && (
+                                <Link
+                                  href={`/shop?product=${encodeURIComponent(
+                                    productId
+                                  )}`}
+                                  className="product-image-link"
+                                >
+                                  {image1 && (
                                     <img
-                                      src={image2}
-                                      className="premium-image image2"
+                                      src={
+                                        image1
+                                      }
+                                      className="premium-image image1"
                                       alt={title}
-                                      onError={(e) => {
-                                        e.currentTarget.style.display =
+                                      onError={(
+                                        event
+                                      ) => {
+                                        event.currentTarget.style.display =
                                           "none";
                                       }}
                                     />
                                   )}
-                              </Link>
 
-                              <div className="product-bottom-action">
-                                {active ? (
-                                  <div className="select-option-btn">
-                                    <span
-                                      className={
-                                        selectedOptionsProduct &&
-                                        String(
-                                          getProductId(
-                                            selectedOptionsProduct
-                                          )
-                                        ) ===
-                                          String(
-                                            productId
-                                          )
-                                          ? "option-text option-hidden"
-                                          : "option-text"
-                                      }
-                                    >
-                                      SELECT OPTIONS
-                                    </span>
-
-                                    <button
-                                      type="button"
-                                      className="option-cart"
-                                      onClick={(event) =>
-                                        openProductOptions(
-                                          product,
-                                          event
-                                        )
-                                      }
-                                    >
-                                      <i className="fa fa-shopping-cart"></i>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="select-option-btn disabled-btn"
-                                    disabled
-                                  >
-                                    CURRENTLY UNAVAILABLE
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="product-hover-actions">
-                                <a
-                                  href="#"
-                                  className="hover-action"
-                                  title="Add to Compare"
-                                  onClick={
-                                    compareClicked
-                                  }
-                                >
-                                  <i className="fa fa-exchange"></i>
-                                </a>
-
-                                <button
-                                  type="button"
-                                  className="hover-action quick-view-btn"
-                                  title="Quick View"
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    openQuickView(
-                                      product
-                                    );
-                                  }}
-                                >
-                                  <i className="fa fa-eye"></i>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className={`hover-action wishlist-action ${
-                                    isWishlist(
-                                      productId
-                                    )
-                                      ? "wishlist-selected"
-                                      : ""
-                                  }`}
-                                  title={
-                                    isWishlist(
-                                      productId
-                                    )
-                                      ? "Remove from Wishlist"
-                                      : "Add to Wishlist"
-                                  }
-                                  onClick={(event) =>
-                                    wishlistClicked(
-                                      product,
-                                      event
-                                    )
-                                  }
-                                >
-                                  <i
-                                    className={
-                                      isWishlist(
-                                        productId
-                                      )
-                                        ? "fa fa-heart"
-                                        : "fa fa-heart-o"
-                                    }
-                                  ></i>
-                                </button>
-                              </div>
-
-                              {active &&
-                                selectedOptionsProduct &&
-                                String(
-                                  getProductId(
-                                    selectedOptionsProduct
-                                  )
-                                ) ===
-                                  String(
-                                    productId
-                                  ) && (
-                                  <div className="product-options-panel active">
-                                    <button
-                                      type="button"
-                                      className="product-options-close"
-                                      onClick={
-                                        closeProductOptions
-                                      }
-                                    >
-                                      ×
-                                    </button>
-
-                                    <div className="product-options-inner">
-                                      <label>
-                                        Weight
-                                      </label>
-
-                                      <select
-                                        className="product-option-select"
-                                        value={
-                                          selectedWeight
+                                  {image2 &&
+                                    image2 !==
+                                      image1 && (
+                                      <img
+                                        src={
+                                          image2
                                         }
-                                        onChange={(e) =>
-                                          handleWeightChange(
-                                            productId,
-                                            e.target.value
-                                          )
+                                        className="premium-image image2"
+                                        alt={
+                                          title
+                                        }
+                                        onError={(
+                                          event
+                                        ) => {
+                                          event.currentTarget.style.display =
+                                            "none";
+                                        }}
+                                      />
+                                    )}
+                                </Link>
+
+                                {/* PRODUCT BOTTOM ACTION */}
+
+                                <div className="product-bottom-action">
+                                  {active ? (
+                                    <div className="select-option-btn">
+                                      <span
+                                        className={
+                                          selectedOptionsProduct &&
+                                          String(
+                                            getProductId(
+                                              selectedOptionsProduct
+                                            )
+                                          ) ===
+                                            String(
+                                              productId
+                                            )
+                                            ? "option-text option-hidden"
+                                            : "option-text"
                                         }
                                       >
-                                        <option value="">
-                                          Select Weight
-                                        </option>
-
-                                        <option value="250g">
-                                          250g
-                                        </option>
-
-                                        <option value="500g">
-                                          500g
-                                        </option>
-
-                                        <option value="1kg">
-                                          1kg
-                                        </option>
-                                      </select>
-
-                                      {selectedWeight && (
-                                        <div className="selected-option-price">
-                                          ₹
-                                          {optionPrice.toLocaleString(
-                                            "en-IN",
-                                            {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            }
-                                          )}
-                                        </div>
-                                      )}
-
-                                      {!selectedWeight && (
-                                        <p className="weight-error">
-                                          Please select a
-                                          weight.
-                                        </p>
-                                      )}
+                                        SELECT OPTIONS
+                                      </span>
 
                                       <button
                                         type="button"
-                                        className="weight-add-cart"
-                                        onClick={() =>
-                                          addToCart(
-                                            product
+                                        className="option-cart"
+                                        onClick={(
+                                          event
+                                        ) =>
+                                          openProductOptions(
+                                            product,
+                                            event
                                           )
                                         }
                                       >
                                         <i className="fa fa-shopping-cart"></i>
-                                        ADD TO CART
                                       </button>
                                     </div>
-                                  </div>
-                                )}
-                            </div>
-
-                            <div className="premium-content">
-                              <h3 className="premium-title">
-                                {title}
-                              </h3>
-
-                              <div className="product-price">
-                                {offerPrice > 0 &&
-                                  offerPrice <
-                                    originalPrice && (
-                                    <span className="old-price">
-                                      ₹
-                                      {originalPrice.toLocaleString(
-                                        "en-IN"
-                                      )}
-                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="select-option-btn disabled-btn"
+                                      disabled
+                                    >
+                                      CURRENTLY
+                                      UNAVAILABLE
+                                    </button>
                                   )}
+                                </div>
 
-                                <span className="current-price">
-                                  ₹
-                                  {getProductPrice(
-                                    product
-                                  ).toLocaleString(
-                                    "en-IN"
+                                {/* HOVER ACTIONS */}
+
+                                <div className="product-hover-actions">
+                                  <a
+                                    href="#"
+                                    className="hover-action"
+                                    title="Add to Compare"
+                                    onClick={
+                                      compareClicked
+                                    }
+                                  >
+                                    <i className="fa fa-exchange"></i>
+                                  </a>
+
+                                  <button
+                                    type="button"
+                                    className="hover-action quick-view-btn"
+                                    title="Quick View"
+                                    onClick={(
+                                      event
+                                    ) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+
+                                      openQuickView(
+                                        product
+                                      );
+                                    }}
+                                  >
+                                    <i className="fa fa-eye"></i>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className={`hover-action wishlist-action ${
+                                      isWishlist(
+                                        productId
+                                      )
+                                        ? "wishlist-selected"
+                                        : ""
+                                    }`}
+                                    title={
+                                      isWishlist(
+                                        productId
+                                      )
+                                        ? "Remove from Wishlist"
+                                        : "Add to Wishlist"
+                                    }
+                                    onClick={(
+                                      event
+                                    ) =>
+                                      wishlistClicked(
+                                        product,
+                                        event
+                                      )
+                                    }
+                                  >
+                                    <i
+                                      className={
+                                        isWishlist(
+                                          productId
+                                        )
+                                          ? "fa fa-heart"
+                                          : "fa fa-heart-o"
+                                      }
+                                    ></i>
+                                  </button>
+                                </div>
+
+                                {/* PRODUCT OPTIONS PANEL */}
+
+                                {active &&
+                                  selectedOptionsProduct &&
+                                  String(
+                                    getProductId(
+                                      selectedOptionsProduct
+                                    )
+                                  ) ===
+                                    String(
+                                      productId
+                                    ) && (
+                                    <div className="product-options-panel active">
+                                      <button
+                                        type="button"
+                                        className="product-options-close"
+                                        onClick={
+                                          closeProductOptions
+                                        }
+                                      >
+                                        ×
+                                      </button>
+
+                                      <div className="product-options-inner">
+                                        <label>
+                                          Weight
+                                        </label>
+
+                                        <select
+                                          className="product-option-select"
+                                          value={
+                                            selectedWeight
+                                          }
+                                          onChange={(
+                                            event
+                                          ) =>
+                                            handleWeightChange(
+                                              productId,
+                                              event
+                                                .target
+                                                .value
+                                            )
+                                          }
+                                        >
+                                          <option value="">
+                                            Select
+                                            Weight
+                                          </option>
+
+                                          <option value="250g">
+                                            250g
+                                          </option>
+
+                                          <option value="500g">
+                                            500g
+                                          </option>
+
+                                          <option value="1kg">
+                                            1kg
+                                          </option>
+                                        </select>
+
+                                        {selectedWeight && (
+                                          <div className="selected-option-price">
+                                            ₹
+                                            {optionPrice.toLocaleString(
+                                              "en-IN",
+                                              {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              }
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {!selectedWeight && (
+                                          <p className="weight-error">
+                                            Please
+                                            select
+                                            a
+                                            weight.
+                                          </p>
+                                        )}
+
+                                        <button
+                                          type="button"
+                                          className="weight-add-cart"
+                                          onClick={() =>
+                                            addToCart(
+                                              product
+                                            )
+                                          }
+                                        >
+                                          <i className="fa fa-shopping-cart"></i>
+                                          ADD TO
+                                          CART
+                                        </button>
+                                      </div>
+                                    </div>
                                   )}
-                                </span>
+                              </div>
+
+                              {/* PRODUCT CONTENT */}
+
+                              <div className="premium-content">
+                                <h3 className="premium-title">
+                                  {title}
+                                </h3>
+
+                                <div className="product-price">
+                                  {offerPrice >
+                                    0 &&
+                                    offerPrice <
+                                      originalPrice && (
+                                      <span className="old-price">
+                                        ₹
+                                        {originalPrice.toLocaleString(
+                                          "en-IN"
+                                        )}
+                                      </span>
+                                    )}
+
+                                  <span className="current-price">
+                                    ₹
+                                    {getProductPrice(
+                                      product
+                                    ).toLocaleString(
+                                      "en-IN"
+                                    )}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-              ) : (
-                <div className="no-product-msg">
-                  No Products Found
-                </div>
-              )}
+                        );
+                      }
+                    )}
+                  </div>
+                ) : (
+                  <div className="no-product-msg">
+                    No Products Found
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        }
+      )}
+
+      {/* =====================================================
+          QUICK VIEW MODAL
+      ===================================================== */}
 
       <div
         className={`quick-view-modal ${
-          quickViewOpen ? "active" : ""
+          quickViewOpen
+            ? "active"
+            : ""
         }`}
         onClick={(event) => {
           if (
-            event.target === event.currentTarget
+            event.target ===
+            event.currentTarget
           ) {
             closeQuickView();
           }
@@ -1044,7 +1328,9 @@ export default function HomePage() {
           <button
             type="button"
             className="quick-view-close"
-            onClick={closeQuickView}
+            onClick={
+              closeQuickView
+            }
           >
             ×
           </button>
@@ -1099,10 +1385,12 @@ export default function HomePage() {
 
                 <select
                   className="quick-view-select"
-                  value={quickWeight}
-                  onChange={(e) =>
+                  value={
+                    quickWeight
+                  }
+                  onChange={(event) =>
                     setQuickWeight(
-                      e.target.value
+                      event.target.value
                     )
                   }
                 >
@@ -1131,7 +1419,9 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() =>
-                      changeQuickQuantity(-1)
+                      changeQuickQuantity(
+                        -1
+                      )
                     }
                   >
                     −
@@ -1144,7 +1434,9 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() =>
-                      changeQuickQuantity(1)
+                      changeQuickQuantity(
+                        1
+                      )
                     }
                   >
                     +
@@ -1181,6 +1473,10 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* =====================================================
+          CSS
+      ===================================================== */}
+
       <style jsx global>{`
         body {
           background: #f3f3f3;
@@ -1196,7 +1492,8 @@ export default function HomePage() {
           height: 500px;
           overflow: hidden;
           margin-top: 145px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 10px 30px
+            rgba(0, 0, 0, 0.15);
         }
 
         .banner-slider {
@@ -1222,7 +1519,12 @@ export default function HomePage() {
           height: 50px;
           border: none;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(
+            255,
+            255,
+            255,
+            0.25
+          );
           color: #fff;
           font-size: 22px;
           cursor: pointer;
@@ -1256,7 +1558,10 @@ export default function HomePage() {
 
         .category-row {
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(
+            6,
+            1fr
+          );
           gap: 20px;
         }
 
@@ -1271,12 +1576,14 @@ export default function HomePage() {
           border-radius: 12px;
           overflow: hidden;
           transition: 0.4s;
-          box-shadow: 0 5px 18px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 5px 18px
+            rgba(0, 0, 0, 0.08);
         }
 
         .category-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 10px 25px
+            rgba(0, 0, 0, 0.15);
         }
 
         .category-img {
@@ -1320,7 +1627,8 @@ export default function HomePage() {
           width: 100%;
           margin: 20px 0;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 10px 30px
+            rgba(0, 0, 0, 0.12);
         }
 
         .nutrition-banner img {
@@ -1369,7 +1677,10 @@ export default function HomePage() {
 
         .premium-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns: repeat(
+            5,
+            1fr
+          );
           gap: 20px;
         }
 
@@ -1382,13 +1693,15 @@ export default function HomePage() {
           background: #fff;
           border-radius: 0;
           overflow: hidden;
-          box-shadow: 0 5px 18px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 5px 18px
+            rgba(0, 0, 0, 0.08);
           transition: 0.3s;
         }
 
         .premium-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 10px 25px
+            rgba(0, 0, 0, 0.15);
         }
 
         .image-wrapper {
@@ -1428,11 +1741,13 @@ export default function HomePage() {
           transition: opacity 0.4s ease;
         }
 
-        .image-wrapper:hover .image2 {
+        .image-wrapper:hover
+          .image2 {
           opacity: 1;
         }
 
-        .image-wrapper:hover .image1 {
+        .image-wrapper:hover
+          .image1 {
           opacity: 0;
         }
 
@@ -1468,7 +1783,8 @@ export default function HomePage() {
           opacity: 0;
           visibility: hidden;
           transform: translateX(15px);
-          transition: opacity 0.3s ease,
+          transition:
+            opacity 0.3s ease,
             visibility 0.3s ease,
             transform 0.3s ease;
         }
@@ -1497,7 +1813,8 @@ export default function HomePage() {
           cursor: pointer;
           box-shadow: 0 3px 10px
             rgba(0, 0, 0, 0.15);
-          transition: background 0.3s ease,
+          transition:
+            background 0.3s ease,
             color 0.3s ease,
             transform 0.3s ease;
         }
@@ -1521,7 +1838,8 @@ export default function HomePage() {
           opacity: 0;
           visibility: hidden;
           transform: translateY(15px);
-          transition: opacity 0.3s ease,
+          transition:
+            opacity 0.3s ease,
             visibility 0.3s ease,
             transform 0.3s ease;
         }
@@ -1541,22 +1859,46 @@ export default function HomePage() {
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: rgba(255, 255, 255, 0.75);
+          background: rgba(
+            255,
+            255,
+            255,
+            0.75
+          );
           backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(
+            8px
+          );
           color: #111;
           border: 1px solid
-            rgba(255, 255, 255, 0.9);
+            rgba(
+              255,
+              255,
+              255,
+              0.9
+            );
           text-decoration: none;
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 1px;
           cursor: pointer;
-          box-shadow: 0 4px 15px
-              rgba(0, 0, 0, 0.15),
+          box-shadow:
+            0 4px 15px
+              rgba(
+                0,
+                0,
+                0,
+                0.15
+              ),
             inset 0 1px 0
-              rgba(255, 255, 255, 0.8);
-          transition: background 0.3s ease,
+              rgba(
+                255,
+                255,
+                255,
+                0.8
+              );
+          transition:
+            background 0.3s ease,
             color 0.3s ease,
             box-shadow 0.3s ease;
         }
@@ -1565,7 +1907,10 @@ export default function HomePage() {
           position: absolute;
           left: 50%;
           top: 50%;
-          transform: translate(-50%, -50%);
+          transform: translate(
+            -50%,
+            -50%
+          );
           opacity: 1;
           visibility: visible;
           white-space: nowrap;
@@ -1581,7 +1926,10 @@ export default function HomePage() {
           position: absolute;
           left: 50%;
           top: 50%;
-          transform: translate(-50%, -50%);
+          transform: translate(
+            -50%,
+            -50%
+          );
           opacity: 0;
           visibility: hidden;
           font-size: 18px;
@@ -1593,14 +1941,28 @@ export default function HomePage() {
         }
 
         .select-option-btn:hover {
-          background: rgba(0, 0, 0, 0.65);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          background: rgba(
+            0,
+            0,
+            0,
+            0.65
+          );
           color: #fff;
-          box-shadow: 0 4px 18px
-              rgba(0, 0, 0, 0.25),
+          box-shadow:
+            0 4px 18px
+              rgba(
+                0,
+                0,
+                0,
+                0.25
+              ),
             inset 0 1px 0
-              rgba(255, 255, 255, 0.15);
+              rgba(
+                255,
+                255,
+                255,
+                0.15
+              );
         }
 
         .select-option-btn:hover
@@ -1617,11 +1979,11 @@ export default function HomePage() {
 
         .disabled-btn {
           background: rgba(
-              120,
-              120,
-              120,
-              0.85
-            ) !important;
+            120,
+            120,
+            120,
+            0.85
+          ) !important;
           color: #fff !important;
           cursor: not-allowed !important;
           pointer-events: none;
@@ -1680,7 +2042,8 @@ export default function HomePage() {
           background: #fff !important;
         }
 
-        .wishlist-action.wishlist-selected i {
+        .wishlist-action.wishlist-selected
+          i {
           color: #e53935 !important;
         }
 
@@ -1695,9 +2058,13 @@ export default function HomePage() {
         .hover-action::after {
           content: attr(title);
           position: absolute;
-          right: calc(100% + 10px);
+          right: calc(
+            100% + 10px
+          );
           top: 50%;
-          transform: translateY(-50%);
+          transform: translateY(
+            -50%
+          );
           background: #111;
           color: #fff;
           padding: 7px 10px;
@@ -1715,13 +2082,20 @@ export default function HomePage() {
         .hover-action::before {
           content: "";
           position: absolute;
-          right: calc(100% + 4px);
+          right: calc(
+            100% + 4px
+          );
           top: 50%;
-          transform: translateY(-50%);
+          transform: translateY(
+            -50%
+          );
           border-width: 5px 0 5px 6px;
           border-style: solid;
-          border-color: transparent
-            transparent transparent #111;
+          border-color:
+            transparent
+            transparent
+            transparent
+            #111;
           opacity: 0;
           visibility: hidden;
           pointer-events: none;
@@ -1748,8 +2122,11 @@ export default function HomePage() {
           padding: 50px 25px 25px;
           opacity: 0;
           visibility: hidden;
-          transform: translateY(10px);
-          transition: opacity 0.3s ease,
+          transform: translateY(
+            10px
+          );
+          transition:
+            opacity 0.3s ease,
             transform 0.3s ease,
             visibility 0.3s ease;
           box-sizing: border-box;
@@ -1758,7 +2135,9 @@ export default function HomePage() {
         .product-options-panel.active {
           opacity: 1;
           visibility: visible;
-          transform: translateY(0);
+          transform: translateY(
+            0
+          );
         }
 
         .product-options-close {
@@ -1787,7 +2166,10 @@ export default function HomePage() {
           position: absolute;
           top: 50%;
           left: 50%;
-          transform: translate(-50%, -50%);
+          transform: translate(
+            -50%,
+            -50%
+          );
           padding: 25px;
           box-sizing: border-box;
         }
@@ -1845,15 +2227,22 @@ export default function HomePage() {
           font-weight: 700;
           letter-spacing: 0.7px;
           box-sizing: border-box;
-          transition: background 0.3s ease,
+          transition:
+            background 0.3s ease,
             transform 0.2s ease;
         }
 
         .weight-add-cart:hover {
           background: #d32f2f;
           color: #fff;
-          transform: translateY(-1px);
+          transform: translateY(
+            -1px
+          );
         }
+
+        /* =====================================================
+           QUICK VIEW
+        ===================================================== */
 
         .quick-view-modal {
           position: fixed;
@@ -1865,7 +2254,12 @@ export default function HomePage() {
           justify-content: center;
           padding: 20px;
           box-sizing: border-box;
-          background: rgba(0, 0, 0, 0.6);
+          background: rgba(
+            0,
+            0,
+            0,
+            0.6
+          );
           z-index: 999999;
         }
 
@@ -1884,13 +2278,16 @@ export default function HomePage() {
           overflow: hidden;
           box-shadow: 0 25px 70px
             rgba(0, 0, 0, 0.3);
-          animation: quickViewOpen 0.25s ease;
+          animation: quickViewOpen
+            0.25s ease;
         }
 
         @keyframes quickViewOpen {
           from {
             opacity: 0;
-            transform: scale(0.95)
+            transform: scale(
+                0.95
+              )
               translateY(15px);
           }
 
@@ -2014,7 +2411,12 @@ export default function HomePage() {
         .quick-view-select:focus {
           border-color: #222;
           box-shadow: 0 0 0 3px
-            rgba(0, 0, 0, 0.06);
+            rgba(
+              0,
+              0,
+              0,
+              0.06
+            );
         }
 
         .quick-quantity {
@@ -2082,9 +2484,16 @@ export default function HomePage() {
 
         .quick-add-cart:hover {
           background: #333;
-          transform: translateY(-1px);
+          transform: translateY(
+            -1px
+          );
           box-shadow: 0 7px 18px
-            rgba(0, 0, 0, 0.18);
+            rgba(
+              0,
+              0,
+              0,
+              0.18
+            );
         }
 
         .quick-add-cart:disabled {
@@ -2105,6 +2514,10 @@ export default function HomePage() {
           color: #555;
           font-size: 18px;
         }
+
+        /* =====================================================
+           LARGE DESKTOP
+        ===================================================== */
 
         @media (min-width: 1400px) {
           .premium-section {
@@ -2137,6 +2550,10 @@ export default function HomePage() {
           }
         }
 
+        /* =====================================================
+           LAPTOP
+        ===================================================== */
+
         @media (min-width: 1025px) and (max-width: 1399px) {
           .premium-section {
             padding: 35px 25px;
@@ -2162,6 +2579,10 @@ export default function HomePage() {
             font-size: 32px;
           }
         }
+
+        /* =====================================================
+           TABLET
+        ===================================================== */
 
         @media (max-width: 1024px) {
           .category-row {
@@ -2191,6 +2612,10 @@ export default function HomePage() {
             height: 260px;
           }
         }
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
 
         @media (max-width: 768px) {
           .hero-banner {
@@ -2292,6 +2717,10 @@ export default function HomePage() {
             padding: 30px 25px;
           }
         }
+
+        /* =====================================================
+           SMALL MOBILE
+        ===================================================== */
 
         @media (max-width: 480px) {
           .hero-banner {
@@ -2523,6 +2952,10 @@ export default function HomePage() {
           }
         }
 
+        /* =====================================================
+           EXTRA SMALL
+        ===================================================== */
+
         @media (max-width: 359px) {
           .premium-grid,
           .product-row,
@@ -2542,6 +2975,10 @@ export default function HomePage() {
             height: 200px;
           }
         }
+
+        /* =====================================================
+           TOUCH DEVICES
+        ===================================================== */
 
         @media (hover: none) and (pointer: coarse) {
           .premium-card:hover,
