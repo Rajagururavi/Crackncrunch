@@ -94,17 +94,6 @@ export default function DashboardPage() {
 
       {/* DASHBOARD CARDS */}
       <div className="dashboard-grid">
-
-        <div className="dashboard-card">
-          <div className="card-title">
-            Total Products
-          </div>
-
-          <div className="card-value">
-            0
-          </div>
-        </div>
-
         <div className="dashboard-card">
           <div className="card-title">
             Total Orders
