@@ -80,7 +80,7 @@ export default function LoginPage() {
           </button>
         </form>
         <div className="register-text">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <a href="/register">Create an Account</a>
         </div>
       </div>

@@ -24,8 +24,12 @@ export default function CategoriesPage() {
     }
   };
   useEffect(() => {
+  const timer = setTimeout(() => {
     loadCategories();
-  }, []);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [loadCategories]);
   const openAddModal = () => {
     setEditingCategory(null);
     setCategoryName("");

@@ -312,26 +312,6 @@ export default function ShopPage() {
       console.error("ADD TO CART ERROR:", error);
     }
   };
-  useEffect(() => {
-    try {
-      const savedWishlist = localStorage.getItem("wishlistIds");
-      const savedCompare = localStorage.getItem("compareIds");
-      if (savedWishlist) {
-        const parsed = JSON.parse(savedWishlist);
-        if (Array.isArray(parsed)) {
-          setWishlistIds(parsed.map(String));
-        }
-      }
-      if (savedCompare) {
-        const parsed = JSON.parse(savedCompare);
-        if (Array.isArray(parsed)) {
-          setCompareIds(parsed.map(String));
-        }
-      }
-    } catch (error) {
-      console.error("Wishlist / compare loading error:", error);
-    }
-  }, []);
   const saveWishlist = (ids) => {
     try {
       localStorage.setItem("wishlistIds", JSON.stringify(ids));
@@ -521,14 +501,14 @@ export default function ShopPage() {
   const randomProducts = useMemo(() => {
     const array = [...filteredProducts,];
     for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = i % (i + 1);
       [
         array[i],
         array[j],
       ] = [
-          array[j],
-          array[i],
-        ];
+        array[j],
+        array[i],
+      ];
     }
     return array.slice(0, 5);
   }, [filteredProducts,]);

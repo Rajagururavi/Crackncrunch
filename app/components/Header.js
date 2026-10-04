@@ -60,14 +60,20 @@ export default function Header() {
     loadSettings();
   }, []);
   useEffect(() => {
+  const timer = setTimeout(() => {
     try {
       const savedCart = localStorage.getItem("cart");
+
       if (savedCart) {
-        setCart(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        setCart(parsedCart);
       }
+
       const savedUser = localStorage.getItem("user");
+
       if (savedUser) {
         const user = JSON.parse(savedUser);
+
         if (user?.logged_in) {
           setLoggedIn(true);
           setFullName(user.full_name || "");
@@ -76,7 +82,10 @@ export default function Header() {
     } catch (error) {
       console.error("Header storage error:", error);
     }
-  }, []);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, []);
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginMessage("");

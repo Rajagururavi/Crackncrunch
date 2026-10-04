@@ -1,12 +1,15 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
+
 export default function HomePage() {
   const banners = [
     "/uploads/2.PNG",
     "/uploads/3.PNG",
     "/uploads/4.PNG",
   ];
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -19,16 +22,26 @@ export default function HomePage() {
   const [selectedOptionsProduct, setSelectedOptionsProduct] = useState(null);
   const [selectedWeights, setSelectedWeights] = useState({});
   const [wishlistIds, setWishlistIds] = useState([]);
+
   useEffect(() => {
-    loadHomeData();
-  }, []);
+  let cancelled = false;
+
   const loadHomeData = async () => {
     try {
-      setLoading(true);
       const response = await fetch("/api/home", {
         cache: "no-store",
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to load home data");
+      }
+
       const data = await response.json();
+
+      if (cancelled) {
+        return;
+      }
+
       if (data.success) {
         setCategories(data.categories || []);
         setBrands(data.brands || []);
@@ -36,124 +49,211 @@ export default function HomePage() {
         setCategories([]);
         setBrands([]);
       }
+
+      setLoading(false);
     } catch (error) {
+      if (cancelled) {
+        return;
+      }
+
       console.error("Home data error:", error);
       setCategories([]);
       setBrands([]);
-    } finally {
       setLoading(false);
     }
   };
+
+  loadHomeData();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
+  useEffect(() => {
+    loadHomeData();
+  }, []);
+
   useEffect(() => {
     if (banners.length <= 1) return;
-    const timer = setInterval(() => {setCurrentSlide((prev) => prev >= banners.length - 1 ? 0 : prev + 1); }, 5000);
+
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) =>
+        prev >= banners.length - 1 ? 0 : prev + 1
+      );
+    }, 5000);
+
     return () => clearInterval(timer);
   }, [banners.length]);
+
   const nextSlide = () => {
     setCurrentSlide((prev) =>
       prev >= banners.length - 1 ? 0 : prev + 1
     );
   };
-  const prevSlide = () => {setCurrentSlide((prev) => prev <= 0 ? banners.length - 1 : prev - 1); };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) =>
+      prev <= 0 ? banners.length - 1 : prev - 1
+    );
+  };
+
   const getImage = (image, folder = "") => {
     if (!image) {
       return "";
     }
+
     if (image.startsWith("data:")) {
       return image;
     }
-    if (image.startsWith("http://") || image.startsWith("https://") || image.startsWith("/")) {
+
+    if (
+      image.startsWith("http://") ||
+      image.startsWith("https://") ||
+      image.startsWith("/")
+    ) {
       return image;
     }
+
     if (folder) {
       return `/uploads/${folder}/${image}`;
     }
+
     return image;
   };
-  const getProductId = (product) => {return product?._id || product?.id || ""; };
-  const getProductTitle = (product) => {return product?.productName || "";};
-  const getProductOriginalPrice = (product) => {return Number(product?.price || 0);};
-  const getProductOfferPrice = (product) => {return Number(product?.offerPrice || 0);};
+
+  const getProductId = (product) => {
+    return product?._id || product?.id || "";
+  };
+
+  const getProductTitle = (product) => {
+    return product?.productName || "";
+  };
+
+  const getProductOriginalPrice = (product) => {
+    return Number(product?.price || 0);
+  };
+
+  const getProductOfferPrice = (product) => {
+    return Number(product?.offerPrice || 0);
+  };
+
   const getProductPrice = (product) => {
     const offerPrice = getProductOfferPrice(product);
+
     if (offerPrice > 0) {
       return offerPrice;
     }
+
     return getProductOriginalPrice(product);
   };
+
   const getProductImage1 = (product) => {
-    if (Array.isArray(product?.images) && product.images.length > 0) {
+    if (
+      Array.isArray(product?.images) &&
+      product.images.length > 0
+    ) {
       return getImage(product.images[0]);
     }
+
     return "";
   };
+
   const getProductImage2 = (product) => {
     if (
-      Array.isArray(product?.images) && product.images.length > 1) {
+      Array.isArray(product?.images) &&
+      product.images.length > 1
+    ) {
       return getImage(product.images[1]);
     }
+
     return "";
   };
+
   const getProductImage3 = (product) => {
-    if (Array.isArray(product?.images) && product.images.length > 2) {
+    if (
+      Array.isArray(product?.images) &&
+      product.images.length > 2
+    ) {
       return getImage(product.images[2]);
     }
+
     return getProductImage1(product);
   };
+
   const isProductActive = (product) => {
-    const status = String(product?.stockStatus || "").trim().toLowerCase();
+    const status = String(product?.stockStatus || "")
+      .trim()
+      .toLowerCase();
+
     return (
       status === "currently available" ||
       status === "available" ||
       status === "in stock"
     );
   };
+
   const getWeightMultiplier = (weight) => {
     if (weight === "250g") {
       return 1;
     }
+
     if (weight === "500g") {
       return 2;
     }
+
     if (weight === "1kg") {
       return 4;
     }
+
     return 1;
   };
+
   const getWeightPrice = (product, weight) => {
     const basePrice = getProductPrice(product);
+
     return basePrice * getWeightMultiplier(weight);
   };
+
   const openProductOptions = (product, event) => {
     event.preventDefault();
     event.stopPropagation();
+
     setSelectedOptionsProduct(product);
+
     setSelectedWeights((prev) => ({
       ...prev,
       [getProductId(product)]: "",
     }));
   };
+
   const closeProductOptions = (event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
+
     setSelectedOptionsProduct(null);
   };
+
   const handleWeightChange = (productId, weight) => {
     setSelectedWeights((prev) => ({
       ...prev,
       [productId]: weight,
     }));
   };
+
   const addToCart = (product) => {
     const productId = getProductId(product);
     const weight = selectedWeights[productId];
+
     if (!weight) {
       alert("Please select a weight.");
       return;
     }
+
     const price = getWeightPrice(product, weight);
+
     const cartItem = {
       product_id: productId,
       product_title: getProductTitle(product),
@@ -162,44 +262,64 @@ export default function HomePage() {
       quantity: 1,
       final_price: price,
     };
+
     try {
       const savedCart = localStorage.getItem("cart");
+
       let cart = [];
+
       if (savedCart) {
         cart = JSON.parse(savedCart);
       }
-      const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && item.weight === weight);
+
+      const existingIndex = cart.findIndex(
+        (item) =>
+          String(item.product_id) === String(productId) &&
+          item.weight === weight
+      );
+
       if (existingIndex !== -1) {
-        cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + 1;
-        cart[existingIndex].final_price = Number(price) * Number(cart[existingIndex].quantity);
+        cart[existingIndex].quantity =
+          Number(cart[existingIndex].quantity || 0) + 1;
+
+        cart[existingIndex].final_price =
+          Number(price) * Number(cart[existingIndex].quantity);
       } else {
         cart.push(cartItem);
       }
+
       localStorage.setItem("cart", JSON.stringify(cart));
+
       sessionStorage.setItem("openCartAfterRefresh", "true");
+
       window.dispatchEvent(new Event("cartUpdated"));
+
       window.location.reload();
     } catch (error) {
       console.error("Add cart error:", error);
     }
   };
+
   const openQuickView = async (product) => {
     const productId = getProductId(product);
+
     setQuickViewOpen(true);
     setQuickLoading(true);
     setQuickProduct(null);
     setQuickQuantity(1);
     setQuickWeight("");
+
     try {
-      const response = await fetch(`/api/products/${productId}`,
-        {
-          cache: "no-store",
-        }
-      );
+      const response = await fetch(`/api/products/${productId}`, {
+        cache: "no-store",
+      });
+
       if (!response.ok) {
         throw new Error("Product not found");
       }
+
       const data = await response.json();
+
       if (data.success && data.product) {
         setQuickProduct(data.product);
       } else {
@@ -212,38 +332,56 @@ export default function HomePage() {
       setQuickLoading(false);
     }
   };
+
   const closeQuickView = () => {
     setQuickViewOpen(false);
     setQuickProduct(null);
     setQuickQuantity(1);
     setQuickWeight("");
   };
+
   const changeQuickQuantity = (change) => {
     setQuickQuantity((prev) => {
       const next = prev + change;
+
       if (next < 1) {
         return 1;
       }
+
       return next;
     });
   };
+
   const getQuickViewTotal = () => {
     if (!quickProduct || !quickWeight) {
       return 0;
     }
-    const singlePrice = getWeightPrice(quickProduct, quickWeight);
+
+    const singlePrice = getWeightPrice(
+      quickProduct,
+      quickWeight
+    );
+
     return singlePrice * quickQuantity;
   };
+
   const addQuickViewToCart = () => {
     if (!quickProduct) {
       return;
     }
+
     if (!quickWeight) {
       alert("Please select a weight.");
       return;
     }
-    const price = getWeightPrice(quickProduct, quickWeight);
+
+    const price = getWeightPrice(
+      quickProduct,
+      quickWeight
+    );
+
     const productId = getProductId(quickProduct);
+
     const cartItem = {
       product_id: productId,
       product_title: getProductTitle(quickProduct),
@@ -252,57 +390,86 @@ export default function HomePage() {
       quantity: quickQuantity,
       final_price: price * quickQuantity,
     };
+
     try {
       const savedCart = localStorage.getItem("cart");
+
       let cart = [];
+
       if (savedCart) {
         cart = JSON.parse(savedCart);
       }
+
       const existingIndex = cart.findIndex(
-        (item) => String(item.product_id) === String(productId) && item.weight === quickWeight
+        (item) =>
+          String(item.product_id) === String(productId) &&
+          item.weight === quickWeight
       );
+
       if (existingIndex !== -1) {
-        cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + quickQuantity;
-        cart[existingIndex].final_price = price * Number(cart[existingIndex].quantity);
+        cart[existingIndex].quantity =
+          Number(cart[existingIndex].quantity || 0) +
+          quickQuantity;
+
+        cart[existingIndex].final_price =
+          price * Number(cart[existingIndex].quantity);
       } else {
         cart.push(cartItem);
       }
+
       localStorage.setItem("cart", JSON.stringify(cart));
-      sessionStorage.setItem("openCartAfterRefresh", "true");
+
+      sessionStorage.setItem(
+        "openCartAfterRefresh",
+        "true"
+      );
+
       window.dispatchEvent(new Event("cartUpdated"));
+
       window.location.reload();
     } catch (error) {
       console.error("Quick cart error:", error);
     }
   };
+
   const isWishlist = (productId) => {
     return wishlistIds.includes(String(productId));
   };
+
   const wishlistClicked = async (product, event) => {
     event.preventDefault();
     event.stopPropagation();
+
     const productId = String(getProductId(product));
+
     const savedUser = localStorage.getItem("user");
+
     if (!savedUser) {
       alert("Please login to add products to wishlist.");
       return;
     }
+
     let user;
+
     try {
       user = JSON.parse(savedUser);
     } catch {
       alert("Please login again.");
       return;
     }
+
     if (!user?.logged_in) {
       alert("Please login to add products to wishlist.");
       return;
     }
+
     if (wishlistIds.includes(productId)) {
       const updated = wishlistIds.filter(
         (id) => id !== productId
       );
+
       setWishlistIds(updated);
+
       try {
         await fetch("/api/wishlist", {
           method: "DELETE",
@@ -314,11 +481,20 @@ export default function HomePage() {
           }),
         });
       } catch (error) {
-        console.error("Wishlist remove error:", error);
+        console.error(
+          "Wishlist remove error:",
+          error
+        );
       }
+
       return;
     }
-    setWishlistIds((prev) => [...prev, productId]);
+
+    setWishlistIds((prev) => [
+      ...prev,
+      productId,
+    ]);
+
     try {
       await fetch("/api/wishlist", {
         method: "POST",
@@ -330,27 +506,41 @@ export default function HomePage() {
         }),
       });
     } catch (error) {
-      console.error("Wishlist add error:", error);
+      console.error(
+        "Wishlist add error:",
+        error
+      );
     }
   };
+
   const compareClicked = (event) => {
     event.preventDefault();
     event.stopPropagation();
+
     const element = event.currentTarget;
+
     if (!element.classList.contains("compare-added")) {
       element.classList.add("compare-added");
+
       const icon = element.querySelector("i");
+
       if (icon) {
         icon.classList.remove("fa-exchange");
         icon.classList.add("fa-check");
       }
-      element.setAttribute("title", "Product added to compare");
+
+      element.setAttribute(
+        "title",
+        "Product added to compare"
+      );
     }
   };
+
   return (
     <>
       <div className="hero-banner">
-        <div className="banner-slider"
+        <div
+          className="banner-slider"
           style={{
             transform: `translateX(-${
               currentSlide * 100
@@ -358,14 +548,36 @@ export default function HomePage() {
           }}
         >
           {banners.map((banner, index) => (
-            <img key={index} src={banner} alt={`Banner ${index + 1}`} />
+            <img
+              key={index}
+              src={banner}
+              alt={`Banner ${index + 1}`}
+            />
           ))}
         </div>
-        <button className="slider-btn prev-btn" type="button" onClick={prevSlide}>❮ </button>
-        <button className="slider-btn next-btn" type="button" onClick={nextSlide}>❯</button>
+
+        <button
+          className="slider-btn prev-btn"
+          type="button"
+          onClick={prevSlide}
+        >
+          ❮
+        </button>
+
+        <button
+          className="slider-btn next-btn"
+          type="button"
+          onClick={nextSlide}
+        >
+          ❯
+        </button>
       </div>
+
       <div className="category-section">
-        <h1 className="section-title">Our Categories</h1>
+        <h1 className="section-title">
+          Our Categories
+        </h1>
+
         {loading ? (
           <div className="no-product-msg">
             Loading Categories...
@@ -373,16 +585,47 @@ export default function HomePage() {
         ) : categories.length > 0 ? (
           <div className="category-row">
             {categories.map((category, index) => {
-              const title = category.name || category.cat_title || category.title || "";
-              const image = getImage(category.image || category.cat_image || "", "categories");
+              const title =
+                category.name ||
+                category.cat_title ||
+                category.title ||
+                "";
+
+              const image = getImage(
+                category.image ||
+                  category.cat_image ||
+                  "",
+                "categories"
+              );
+
               return (
-                <div className="category-column" key={category._id || category.id || index}>
+                <div
+                  className="category-column"
+                  key={
+                    category._id ||
+                    category.id ||
+                    index
+                  }
+                >
                   <div className="category-card">
-                    <Link href={`/shop?category=${encodeURIComponent(title)}`}>
-                      {image && (<img src={image} className="category-img" alt={title} />)}
+                    <Link
+                      href={`/shop?category=${encodeURIComponent(
+                        title
+                      )}`}
+                    >
+                      {image && (
+                        <img
+                          src={image}
+                          className="category-img"
+                          alt={title}
+                        />
+                      )}
                     </Link>
+
                     <div className="category-content">
-                      <h3 className="category-title">{title}</h3>
+                      <h3 className="category-title">
+                        {title}
+                      </h3>
                     </div>
                   </div>
                 </div>
@@ -395,125 +638,385 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
       {brands.map((brand, brandIndex) => {
-        const brandTitle = brand.brandName || brand.name || brand.brand_title || brand.title || "";
-        const brandImage = getImage(brand.image || brand.brand_image || "", "brands");
+        const brandTitle =
+          brand.brandName ||
+          brand.name ||
+          brand.brand_title ||
+          brand.title ||
+          "";
+
+        const brandImage = getImage(
+          brand.image ||
+            brand.brand_image ||
+            "",
+          "brands"
+        );
+
         const products = brand.products || [];
+
         return (
-          <div key={brand._id || brand.id || brandIndex}>
+          <div
+            key={
+              brand._id ||
+              brand.id ||
+              brandIndex
+            }
+          >
             {brandImage && (
               <div className="nutrition-banner">
-                <img src={brandImage} alt={brandTitle} />
+                <img
+                  src={brandImage}
+                  alt={brandTitle}
+                />
               </div>
             )}
+
             <div className="premium-section">
               <div className="premium-header">
-                <h2 className="premium-main-title">{brandTitle}</h2>
-                <Link href={`/shop?brand=${encodeURIComponent(brandTitle)}`} className="premium-view-btn">View All</Link>
+                <h2 className="premium-main-title">
+                  {brandTitle}
+                </h2>
+
+                <Link
+                  href={`/shop?brand=${encodeURIComponent(
+                    brandTitle
+                  )}`}
+                  className="premium-view-btn"
+                >
+                  View All
+                </Link>
               </div>
+
               {products.length > 0 ? (
                 <div className="premium-grid">
-                  {products.map((product, productIndex) => {
-                    const productId = getProductId(product);
-                    const title = getProductTitle(product);
-                    const image1 = getProductImage1(product);
-                    const image2 = getProductImage2(product);
-                    const active = isProductActive(product);
-                    const selectedWeight = selectedWeights[productId] || "";
-                    const originalPrice = getProductOriginalPrice(product);
-                    const offerPrice = getProductOfferPrice(product);
-                    const optionPrice = selectedWeight ? getWeightPrice(product, selectedWeight): getProductPrice(product);
-                    return (
-                      <div className="premium-column" key={productId || productIndex}>
-                        <div className="premium-card">
-                          <div className="image-wrapper">
-                            {active ? (
-                              <span className="sale-badge sale">SALE</span>
-                            ) : (
-                              <span className="sale-badge unavailable">CURRENTLY UNAVAILABLE</span>
-                            )}
-                            <Link
-                              href={`/shop?product=${encodeURIComponent(productId)}`} className="product-image-link">
-                              {image1 && (<img src={image1} className="premium-image image1" alt={title} onError={(e) => {e.currentTarget.style.display = "none";}} />)}
-                              {image2 && image2 !== image1 && (<img src={image2} className="premium-image image2" alt={title} onError={(e) => {e.currentTarget.style.display = "none";}}/>)}
-                            </Link>
-                            <div className="product-bottom-action">
+                  {products.map(
+                    (product, productIndex) => {
+                      const productId =
+                        getProductId(product);
+
+                      const title =
+                        getProductTitle(product);
+
+                      const image1 =
+                        getProductImage1(product);
+
+                      const image2 =
+                        getProductImage2(product);
+
+                      const active =
+                        isProductActive(product);
+
+                      const selectedWeight =
+                        selectedWeights[
+                          productId
+                        ] || "";
+
+                      const originalPrice =
+                        getProductOriginalPrice(
+                          product
+                        );
+
+                      const offerPrice =
+                        getProductOfferPrice(
+                          product
+                        );
+
+                      const optionPrice =
+                        selectedWeight
+                          ? getWeightPrice(
+                              product,
+                              selectedWeight
+                            )
+                          : getProductPrice(
+                              product
+                            );
+
+                      return (
+                        <div
+                          className="premium-column"
+                          key={
+                            productId ||
+                            productIndex
+                          }
+                        >
+                          <div className="premium-card">
+                            <div className="image-wrapper">
                               {active ? (
-                                <div className="select-option-btn">
-                                  <span className={selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId) ? "option-text option-hidden" : "option-text" }>
-                                    SELECT OPTIONS
-                                  </span>
-                                  <button type="button" className="option-cart" onClick={(event) => openProductOptions(product, event)}>
-                                    <i className="fa fa-shopping-cart"></i>
-                                  </button>
-                                </div>
+                                <span className="sale-badge sale">
+                                  SALE
+                                </span>
                               ) : (
-                                <button type="button" className="select-option-btn disabled-btn" disabled>CURRENTLY UNAVAILABLE</button>
+                                <span className="sale-badge unavailable">
+                                  CURRENTLY UNAVAILABLE
+                                </span>
                               )}
-                            </div>
-                            <div className="product-hover-actions">
-                              <a href="#" className="hover-action" title="Add to Compare" onClick={compareClicked}>
-                                <i className="fa fa-exchange"></i>
-                              </a>
-                              <button type="button" className="hover-action quick-view-btn" title="Quick View"
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  openQuickView(product);
-                                }}
+
+                              <Link
+                                href={`/shop?product=${encodeURIComponent(
+                                  productId
+                                )}`}
+                                className="product-image-link"
                               >
-                                <i className="fa fa-eye"></i>
-                              </button>
-                              <button type="button" className={`hover-action wishlist-action ${isWishlist(productId) ? "wishlist-selected" : ""}`}
-                                title={isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"} onClick={(event) => wishlistClicked(product, event)}
-                              >
-                                <i className={isWishlist(productId) ? "fa fa-heart" : "fa fa-heart-o"}></i>
-                              </button>
-                            </div>
-                            {active && selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId) && (
-                              <div className="product-options-panel active">
-                                <button type="button" className="product-options-close" onClick={closeProductOptions}> × </button>
-                                <div className="product-options-inner">
-                                  <label>Weight</label>
-                                    <select className="product-option-select" value={selectedWeight} onChange={(e) => handleWeightChange(productId, e.target.value)}>
-                                      <option value="">Select Weight</option>
-                                      <option value="250g">250g</option>
-                                      <option value="500g">500g</option>
-                                      <option value="1kg">1kg</option>
-                                    </select>
-                                    {selectedWeight && (
-                                      <div className="selected-option-price">₹
-                                        {optionPrice.toLocaleString("en-IN",
-                                          {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          }
-                                        )}
-                                      </div>
-                                    )}
-                                    {!selectedWeight && (<p className="weight-error">Please select a weight.</p>)}
-                                    <button type="button" className="weight-add-cart" onClick={() => addToCart(product)}><i className="fa fa-shopping-cart"></i>ADD TO CART</button>
-                                  </div>
-                                </div>
-                              )}
-                          </div>
-                          <div className="premium-content">
-                            <h3 className="premium-title">{title}</h3>
-                            <div className="product-price">
-                              {offerPrice > 0 && offerPrice < originalPrice && (
-                                  <span className="old-price">₹
-                                    {originalPrice.toLocaleString("en-IN")}
-                                  </span>
+                                {image1 && (
+                                  <img
+                                    src={image1}
+                                    className="premium-image image1"
+                                    alt={title}
+                                    onError={(e) => {
+                                      e.currentTarget.style.display =
+                                        "none";
+                                    }}
+                                  />
                                 )}
-                              <span className="current-price">₹
-                                {getProductPrice(product).toLocaleString("en-IN")}
-                              </span>
+
+                                {image2 &&
+                                  image2 !==
+                                    image1 && (
+                                    <img
+                                      src={image2}
+                                      className="premium-image image2"
+                                      alt={title}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display =
+                                          "none";
+                                      }}
+                                    />
+                                  )}
+                              </Link>
+
+                              <div className="product-bottom-action">
+                                {active ? (
+                                  <div className="select-option-btn">
+                                    <span
+                                      className={
+                                        selectedOptionsProduct &&
+                                        String(
+                                          getProductId(
+                                            selectedOptionsProduct
+                                          )
+                                        ) ===
+                                          String(
+                                            productId
+                                          )
+                                          ? "option-text option-hidden"
+                                          : "option-text"
+                                      }
+                                    >
+                                      SELECT OPTIONS
+                                    </span>
+
+                                    <button
+                                      type="button"
+                                      className="option-cart"
+                                      onClick={(event) =>
+                                        openProductOptions(
+                                          product,
+                                          event
+                                        )
+                                      }
+                                    >
+                                      <i className="fa fa-shopping-cart"></i>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="select-option-btn disabled-btn"
+                                    disabled
+                                  >
+                                    CURRENTLY UNAVAILABLE
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="product-hover-actions">
+                                <a
+                                  href="#"
+                                  className="hover-action"
+                                  title="Add to Compare"
+                                  onClick={
+                                    compareClicked
+                                  }
+                                >
+                                  <i className="fa fa-exchange"></i>
+                                </a>
+
+                                <button
+                                  type="button"
+                                  className="hover-action quick-view-btn"
+                                  title="Quick View"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    openQuickView(
+                                      product
+                                    );
+                                  }}
+                                >
+                                  <i className="fa fa-eye"></i>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className={`hover-action wishlist-action ${
+                                    isWishlist(
+                                      productId
+                                    )
+                                      ? "wishlist-selected"
+                                      : ""
+                                  }`}
+                                  title={
+                                    isWishlist(
+                                      productId
+                                    )
+                                      ? "Remove from Wishlist"
+                                      : "Add to Wishlist"
+                                  }
+                                  onClick={(event) =>
+                                    wishlistClicked(
+                                      product,
+                                      event
+                                    )
+                                  }
+                                >
+                                  <i
+                                    className={
+                                      isWishlist(
+                                        productId
+                                      )
+                                        ? "fa fa-heart"
+                                        : "fa fa-heart-o"
+                                    }
+                                  ></i>
+                                </button>
+                              </div>
+
+                              {active &&
+                                selectedOptionsProduct &&
+                                String(
+                                  getProductId(
+                                    selectedOptionsProduct
+                                  )
+                                ) ===
+                                  String(
+                                    productId
+                                  ) && (
+                                  <div className="product-options-panel active">
+                                    <button
+                                      type="button"
+                                      className="product-options-close"
+                                      onClick={
+                                        closeProductOptions
+                                      }
+                                    >
+                                      ×
+                                    </button>
+
+                                    <div className="product-options-inner">
+                                      <label>
+                                        Weight
+                                      </label>
+
+                                      <select
+                                        className="product-option-select"
+                                        value={
+                                          selectedWeight
+                                        }
+                                        onChange={(e) =>
+                                          handleWeightChange(
+                                            productId,
+                                            e.target.value
+                                          )
+                                        }
+                                      >
+                                        <option value="">
+                                          Select Weight
+                                        </option>
+
+                                        <option value="250g">
+                                          250g
+                                        </option>
+
+                                        <option value="500g">
+                                          500g
+                                        </option>
+
+                                        <option value="1kg">
+                                          1kg
+                                        </option>
+                                      </select>
+
+                                      {selectedWeight && (
+                                        <div className="selected-option-price">
+                                          ₹
+                                          {optionPrice.toLocaleString(
+                                            "en-IN",
+                                            {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            }
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {!selectedWeight && (
+                                        <p className="weight-error">
+                                          Please select a
+                                          weight.
+                                        </p>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        className="weight-add-cart"
+                                        onClick={() =>
+                                          addToCart(
+                                            product
+                                          )
+                                        }
+                                      >
+                                        <i className="fa fa-shopping-cart"></i>
+                                        ADD TO CART
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                            </div>
+
+                            <div className="premium-content">
+                              <h3 className="premium-title">
+                                {title}
+                              </h3>
+
+                              <div className="product-price">
+                                {offerPrice > 0 &&
+                                  offerPrice <
+                                    originalPrice && (
+                                    <span className="old-price">
+                                      ₹
+                                      {originalPrice.toLocaleString(
+                                        "en-IN"
+                                      )}
+                                    </span>
+                                  )}
+
+                                <span className="current-price">
+                                  ₹
+                                  {getProductPrice(
+                                    product
+                                  ).toLocaleString(
+                                    "en-IN"
+                                  )}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               ) : (
                 <div className="no-product-msg">
@@ -524,13 +1027,28 @@ export default function HomePage() {
           </div>
         );
       })}
-      <div className={`quick-view-modal ${quickViewOpen ? "active" : "" }`} onClick={(event) => {
-          if (event.target === event.currentTarget) {
+
+      <div
+        className={`quick-view-modal ${
+          quickViewOpen ? "active" : ""
+        }`}
+        onClick={(event) => {
+          if (
+            event.target === event.currentTarget
+          ) {
             closeQuickView();
           }
-      }}>
+        }}
+      >
         <div className="quick-view-box">
-          <button type="button" className="quick-view-close" onClick={closeQuickView}>×</button>
+          <button
+            type="button"
+            className="quick-view-close"
+            onClick={closeQuickView}
+          >
+            ×
+          </button>
+
           {quickLoading ? (
             <div className="quick-loading">
               Loading...
@@ -538,37 +1056,120 @@ export default function HomePage() {
           ) : quickProduct ? (
             <div className="quick-view-content">
               <div className="quick-view-image">
-                {getProductImage1(quickProduct) && (<img src={getProductImage1(quickProduct)} alt={getProductTitle(quickProduct)}/>)}
+                {getProductImage1(
+                  quickProduct
+                ) && (
+                  <img
+                    src={getProductImage1(
+                      quickProduct
+                    )}
+                    alt={getProductTitle(
+                      quickProduct
+                    )}
+                  />
+                )}
               </div>
+
               <div className="quick-view-details">
-                <h2>{getProductTitle(quickProduct)}</h2>
-                <div className="quick-view-price">₹
-                  {getQuickViewTotal().toLocaleString("en-IN",
+                <h2>
+                  {getProductTitle(
+                    quickProduct
+                  )}
+                </h2>
+
+                <div className="quick-view-price">
+                  ₹
+                  {getQuickViewTotal().toLocaleString(
+                    "en-IN",
                     {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     }
                   )}
                 </div>
+
                 <div className="quick-view-description">
-                  {quickProduct.description || "Premium quality product from Crack n Crunch."}
+                  {quickProduct.description ||
+                    "Premium quality product from Crack n Crunch."}
                 </div>
-                <label className="quick-view-label">Weight</label>
-                <select className="quick-view-select" value={quickWeight} onChange={(e) => setQuickWeight(e.target.value)}>
-                  <option value="">Select Weight</option>
-                  <option value="250g">250g</option>
-                  <option value="500g">500g</option>
-                  <option value="1kg">1kg</option>
+
+                <label className="quick-view-label">
+                  Weight
+                </label>
+
+                <select
+                  className="quick-view-select"
+                  value={quickWeight}
+                  onChange={(e) =>
+                    setQuickWeight(
+                      e.target.value
+                    )
+                  }
+                >
+                  <option value="">
+                    Select Weight
+                  </option>
+
+                  <option value="250g">
+                    250g
+                  </option>
+
+                  <option value="500g">
+                    500g
+                  </option>
+
+                  <option value="1kg">
+                    1kg
+                  </option>
                 </select>
-                <label className="quick-view-label">Quantity</label>
+
+                <label className="quick-view-label">
+                  Quantity
+                </label>
+
                 <div className="quick-quantity">
-                  <button type="button" onClick={() => changeQuickQuantity(-1)}>−</button>
-                  <span>{quickQuantity}</span>
-                  <button type="button" onClick={() => changeQuickQuantity(1)}>+</button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      changeQuickQuantity(-1)
+                    }
+                  >
+                    −
+                  </button>
+
+                  <span>
+                    {quickQuantity}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      changeQuickQuantity(1)
+                    }
+                  >
+                    +
+                  </button>
                 </div>
-                <button type="button" className="quick-add-cart" disabled={!isProductActive(quickProduct)} onClick={addQuickViewToCart}>
+
+                <button
+                  type="button"
+                  className="quick-add-cart"
+                  disabled={
+                    !isProductActive(
+                      quickProduct
+                    )
+                  }
+                  onClick={
+                    addQuickViewToCart
+                  }
+                >
                   <i className="fa fa-shopping-cart"></i>
-                  {isProductActive(quickProduct) ? "ADD TO CART" : "CURRENTLY UNAVAILABLE"}
+
+                  {isProductActive(
+                    quickProduct
+                  )
+                    ? "ADD TO CART"
+                    : "CURRENTLY UNAVAILABLE"}
                 </button>
               </div>
             </div>
@@ -579,6 +1180,7 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
       <style jsx global>{`
         body {
           background: #f3f3f3;
@@ -587,6 +1189,7 @@ export default function HomePage() {
           padding: 0;
           overflow-x: hidden;
         }
+
         .hero-banner {
           position: relative;
           width: 100%;
@@ -595,12 +1198,14 @@ export default function HomePage() {
           margin-top: 145px;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
         }
+
         .banner-slider {
           display: flex;
           width: 100%;
           height: 100%;
           transition: 1s ease-in-out;
         }
+
         .banner-slider img {
           min-width: 100%;
           width: 100%;
@@ -608,6 +1213,7 @@ export default function HomePage() {
           object-fit: cover;
           flex-shrink: 0;
         }
+
         .slider-btn {
           position: absolute;
           top: 50%;
@@ -623,18 +1229,23 @@ export default function HomePage() {
           z-index: 100;
           transition: 0.3s;
         }
+
         .slider-btn:hover {
           background: #00bcd4;
         }
+
         .prev-btn {
           left: 20px;
         }
+
         .next-btn {
           right: 20px;
         }
+
         .category-section {
           padding: 40px 20px;
         }
+
         .section-title {
           text-align: center;
           font-size: 38px;
@@ -642,14 +1253,17 @@ export default function HomePage() {
           color: #222;
           margin-bottom: 40px;
         }
+
         .category-row {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
           gap: 20px;
         }
+
         .category-column {
           width: 100%;
         }
+
         .category-card {
           width: 100%;
           height: 280px;
@@ -659,16 +1273,19 @@ export default function HomePage() {
           transition: 0.4s;
           box-shadow: 0 5px 18px rgba(0, 0, 0, 0.08);
         }
+
         .category-card:hover {
           transform: translateY(-5px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
+
         .category-img {
           width: 100%;
           height: 220px;
           object-fit: cover;
           display: block;
         }
+
         .category-content {
           height: 60px;
           display: flex;
@@ -679,12 +1296,14 @@ export default function HomePage() {
           padding: 10px;
           box-sizing: border-box;
         }
+
         .category-title {
           font-size: 18px;
           font-weight: 700;
           color: #222;
           margin: 0;
         }
+
         .no-product-msg {
           width: 100%;
           text-align: center;
@@ -696,12 +1315,14 @@ export default function HomePage() {
           color: #777;
           box-sizing: border-box;
         }
+
         .nutrition-banner {
           width: 100%;
           margin: 20px 0;
           overflow: hidden;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
         }
+
         .nutrition-banner img {
           width: 100%;
           height: 450px;
@@ -709,17 +1330,20 @@ export default function HomePage() {
           object-fit: cover;
           transition: transform 0.5s ease;
         }
+
         .premium-section {
           width: 100%;
           padding: 40px 20px;
           box-sizing: border-box;
         }
+
         .premium-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 25px;
         }
+
         .premium-main-title {
           margin: 0;
           font-size: 38px;
@@ -727,6 +1351,7 @@ export default function HomePage() {
           color: #222;
           word-break: break-word;
         }
+
         .premium-view-btn {
           background: #000;
           color: #fff;
@@ -737,17 +1362,21 @@ export default function HomePage() {
           font-weight: 600;
           flex-shrink: 0;
         }
+
         .premium-view-btn:hover {
           background: #333;
         }
+
         .premium-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
           gap: 20px;
         }
+
         .premium-column {
           position: relative;
         }
+
         .premium-card {
           position: relative;
           background: #fff;
@@ -756,20 +1385,24 @@ export default function HomePage() {
           box-shadow: 0 5px 18px rgba(0, 0, 0, 0.08);
           transition: 0.3s;
         }
+
         .premium-card:hover {
           transform: translateY(-5px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
+
         .image-wrapper {
           position: relative;
           overflow: hidden;
           width: 100%;
         }
+
         .image-wrapper > a {
           display: block;
           position: relative;
           width: 100%;
         }
+
         .premium-image {
           width: 100%;
           height: 300px;
@@ -777,10 +1410,12 @@ export default function HomePage() {
           display: block;
           transition: opacity 0.4s ease;
         }
+
         .image1 {
           position: relative;
           z-index: 1;
         }
+
         .image2 {
           position: absolute;
           top: 0;
@@ -792,12 +1427,15 @@ export default function HomePage() {
           z-index: 2;
           transition: opacity 0.4s ease;
         }
+
         .image-wrapper:hover .image2 {
           opacity: 1;
         }
+
         .image-wrapper:hover .image1 {
           opacity: 0;
         }
+
         .sale-badge {
           position: absolute;
           top: 12px;
@@ -810,12 +1448,15 @@ export default function HomePage() {
           border-radius: 0;
           z-index: 5;
         }
+
         .sale {
           background: #28a745;
         }
+
         .unavailable {
           background: #dc3545;
         }
+
         .product-hover-actions {
           position: absolute;
           top: 12px;
@@ -827,13 +1468,18 @@ export default function HomePage() {
           opacity: 0;
           visibility: hidden;
           transform: translateX(15px);
-          transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+          transition: opacity 0.3s ease,
+            visibility 0.3s ease,
+            transform 0.3s ease;
         }
-        .image-wrapper:hover .product-hover-actions {
+
+        .image-wrapper:hover
+          .product-hover-actions {
           opacity: 1;
           visibility: visible;
           transform: translateX(0);
         }
+
         .hover-action {
           position: relative;
           width: 40px;
@@ -849,17 +1495,23 @@ export default function HomePage() {
           text-decoration: none;
           font-size: 16px;
           cursor: pointer;
-          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-          transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+          box-shadow: 0 3px 10px
+            rgba(0, 0, 0, 0.15);
+          transition: background 0.3s ease,
+            color 0.3s ease,
+            transform 0.3s ease;
         }
+
         .hover-action:hover {
           background: #000;
           color: #fff;
           transform: scale(1.08);
         }
+
         .hover-action i {
           line-height: 1;
         }
+
         .product-bottom-action {
           position: absolute;
           left: 15px;
@@ -869,13 +1521,18 @@ export default function HomePage() {
           opacity: 0;
           visibility: hidden;
           transform: translateY(15px);
-          transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+          transition: opacity 0.3s ease,
+            visibility 0.3s ease,
+            transform 0.3s ease;
         }
-        .image-wrapper:hover .product-bottom-action {
+
+        .image-wrapper:hover
+          .product-bottom-action {
           opacity: 1;
           visibility: visible;
           transform: translateY(0);
         }
+
         .select-option-btn {
           position: relative;
           width: 100%;
@@ -888,15 +1545,22 @@ export default function HomePage() {
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           color: #111;
-          border: 1px solid rgba(255, 255, 255, 0.9);
+          border: 1px solid
+            rgba(255, 255, 255, 0.9);
           text-decoration: none;
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 1px;
           cursor: pointer;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-          transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+          box-shadow: 0 4px 15px
+              rgba(0, 0, 0, 0.15),
+            inset 0 1px 0
+              rgba(255, 255, 255, 0.8);
+          transition: background 0.3s ease,
+            color 0.3s ease,
+            box-shadow 0.3s ease;
         }
+
         .option-text {
           position: absolute;
           left: 50%;
@@ -907,10 +1571,12 @@ export default function HomePage() {
           white-space: nowrap;
           transition: opacity 0.2s ease;
         }
+
         .option-hidden {
           opacity: 0;
           visibility: hidden;
         }
+
         .option-cart {
           position: absolute;
           left: 50%;
@@ -925,28 +1591,43 @@ export default function HomePage() {
           color: inherit;
           cursor: pointer;
         }
+
         .select-option-btn:hover {
           background: rgba(0, 0, 0, 0.65);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           color: #fff;
-          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+          box-shadow: 0 4px 18px
+              rgba(0, 0, 0, 0.25),
+            inset 0 1px 0
+              rgba(255, 255, 255, 0.15);
         }
-        .select-option-btn:hover .option-text {
+
+        .select-option-btn:hover
+          .option-text {
           opacity: 0;
           visibility: hidden;
         }
-        .select-option-btn:hover .option-cart {
+
+        .select-option-btn:hover
+          .option-cart {
           opacity: 1;
           visibility: visible;
         }
+
         .disabled-btn {
-          background: rgba(120, 120, 120, 0.85) !important;
+          background: rgba(
+              120,
+              120,
+              120,
+              0.85
+            ) !important;
           color: #fff !important;
           cursor: not-allowed !important;
           pointer-events: none;
           border: none !important;
         }
+
         .premium-content {
           min-height: 90px;
           display: flex;
@@ -957,6 +1638,7 @@ export default function HomePage() {
           text-align: center;
           box-sizing: border-box;
         }
+
         .premium-title {
           margin: 5px 0 5px;
           font-size: 16px;
@@ -964,6 +1646,7 @@ export default function HomePage() {
           line-height: 1.4;
           color: #222;
         }
+
         .product-price {
           display: flex;
           align-items: center;
@@ -971,35 +1654,44 @@ export default function HomePage() {
           gap: 8px;
           margin-top: 2px;
         }
+
         .old-price {
           color: #888;
           font-size: 13px;
           text-decoration: line-through;
         }
+
         .current-price {
           color: #111;
           font-size: 15px;
           font-weight: 700;
         }
+
         .wishlist-action {
           background: #fff !important;
           color: #000 !important;
         }
+
         .wishlist-action i {
           color: #000 !important;
         }
+
         .wishlist-action.wishlist-selected {
           background: #fff !important;
         }
+
         .wishlist-action.wishlist-selected i {
           color: #e53935 !important;
         }
+
         .wishlist-action:hover {
           background: #000 !important;
         }
+
         .wishlist-action:hover i {
           color: #e53935 !important;
         }
+
         .hover-action::after {
           content: attr(title);
           position: absolute;
@@ -1019,6 +1711,7 @@ export default function HomePage() {
           transition: all 0.25s ease;
           z-index: 100;
         }
+
         .hover-action::before {
           content: "";
           position: absolute;
@@ -1027,17 +1720,21 @@ export default function HomePage() {
           transform: translateY(-50%);
           border-width: 5px 0 5px 6px;
           border-style: solid;
-          border-color: transparent transparent transparent #111;
+          border-color: transparent
+            transparent transparent #111;
           opacity: 0;
           visibility: hidden;
           pointer-events: none;
           transition: all 0.25s ease;
           z-index: 100;
         }
-        .hover-action:hover::after, .hover-action:hover::before {
+
+        .hover-action:hover::after,
+        .hover-action:hover::before {
           opacity: 1;
           visibility: visible;
         }
+
         .product-options-panel {
           position: absolute;
           top: 0;
@@ -1052,14 +1749,18 @@ export default function HomePage() {
           opacity: 0;
           visibility: hidden;
           transform: translateY(10px);
-          transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+          transition: opacity 0.3s ease,
+            transform 0.3s ease,
+            visibility 0.3s ease;
           box-sizing: border-box;
         }
+
         .product-options-panel.active {
           opacity: 1;
           visibility: visible;
           transform: translateY(0);
         }
+
         .product-options-close {
           position: absolute;
           top: 12px;
@@ -1076,9 +1777,11 @@ export default function HomePage() {
           cursor: pointer;
           z-index: 10;
         }
+
         .product-options-close:hover {
           background: #d32f2f;
         }
+
         .product-options-inner {
           width: 100%;
           position: absolute;
@@ -1088,6 +1791,7 @@ export default function HomePage() {
           padding: 25px;
           box-sizing: border-box;
         }
+
         .product-options-inner label {
           display: block;
           margin-bottom: 8px;
@@ -1097,6 +1801,7 @@ export default function HomePage() {
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
+
         .product-option-select {
           width: 100%;
           height: 42px;
@@ -1108,6 +1813,7 @@ export default function HomePage() {
           outline: none;
           cursor: pointer;
         }
+
         .selected-option-price {
           margin-top: 10px;
           color: #1a8f3c;
@@ -1115,12 +1821,14 @@ export default function HomePage() {
           font-weight: 700;
           text-align: center;
         }
+
         .weight-error {
           margin: 7px 0 0;
           color: #d32f2f;
           font-size: 11px;
           font-weight: 600;
         }
+
         .weight-add-cart {
           width: 100%;
           height: 42px;
@@ -1137,13 +1845,16 @@ export default function HomePage() {
           font-weight: 700;
           letter-spacing: 0.7px;
           box-sizing: border-box;
-          transition: background 0.3s ease, transform 0.2s ease;
+          transition: background 0.3s ease,
+            transform 0.2s ease;
         }
+
         .weight-add-cart:hover {
           background: #d32f2f;
           color: #fff;
           transform: translateY(-1px);
         }
+
         .quick-view-modal {
           position: fixed;
           inset: 0;
@@ -1157,9 +1868,11 @@ export default function HomePage() {
           background: rgba(0, 0, 0, 0.6);
           z-index: 999999;
         }
+
         .quick-view-modal.active {
           display: flex;
         }
+
         .quick-view-box {
           position: relative;
           width: 900px;
@@ -1169,17 +1882,25 @@ export default function HomePage() {
           background: #fff;
           border-radius: 14px;
           overflow: hidden;
-          box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 25px 70px
+            rgba(0, 0, 0, 0.3);
           animation: quickViewOpen 0.25s ease;
         }
+
         @keyframes quickViewOpen {
           from {
-            opacity: 0; transform: scale(0.95) translateY(15px);
+            opacity: 0;
+            transform: scale(0.95)
+              translateY(15px);
           }
+
           to {
-            opacity: 1; transform: scale(1) translateY(0);
+            opacity: 1;
+            transform: scale(1)
+              translateY(0);
           }
         }
+
         .quick-view-close {
           position: absolute;
           top: 14px;
@@ -1197,18 +1918,22 @@ export default function HomePage() {
           line-height: 1;
           cursor: pointer;
           z-index: 20;
-          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 3px 12px
+            rgba(0, 0, 0, 0.15);
           transition: 0.2s ease;
         }
+
         .quick-view-close:hover {
           background: #222;
           color: #fff;
         }
+
         .quick-view-content {
           width: 100%;
           display: flex;
           min-height: 500px;
         }
+
         .quick-view-image {
           width: 50%;
           display: flex;
@@ -1218,6 +1943,7 @@ export default function HomePage() {
           box-sizing: border-box;
           background: #f7f7f7;
         }
+
         .quick-view-image img {
           display: block;
           width: 100%;
@@ -1225,12 +1951,14 @@ export default function HomePage() {
           height: 400px;
           object-fit: contain;
         }
+
         .quick-view-details {
           width: 50%;
           padding: 45px 40px 35px;
           box-sizing: border-box;
           overflow-y: auto;
         }
+
         .quick-view-details h2 {
           margin: 0 45px 14px 0;
           color: #171717;
@@ -1238,18 +1966,21 @@ export default function HomePage() {
           font-weight: 700;
           line-height: 1.35;
         }
+
         .quick-view-price {
           margin-bottom: 20px;
           color: #111;
           font-size: 23px;
           font-weight: 700;
         }
+
         .quick-view-description {
           margin-bottom: 25px;
           color: #666;
           font-size: 14px;
           line-height: 1.7;
         }
+
         .quick-view-label {
           display: block;
           margin-bottom: 8px;
@@ -1259,6 +1990,7 @@ export default function HomePage() {
           text-transform: uppercase;
           letter-spacing: 0.4px;
         }
+
         .quick-view-select {
           width: 100%;
           height: 48px;
@@ -1274,14 +2006,17 @@ export default function HomePage() {
           cursor: pointer;
           transition: 0.2s ease;
         }
+
         .quick-view-select:hover {
           border-color: #999;
         }
+
         .quick-view-select:focus {
           border-color: #222;
           box-shadow: 0 0 0 3px
             rgba(0, 0, 0, 0.06);
         }
+
         .quick-quantity {
           width: fit-content;
           height: 46px;
@@ -1293,6 +2028,7 @@ export default function HomePage() {
           overflow: hidden;
           background: #fff;
         }
+
         .quick-quantity button {
           width: 46px;
           height: 46px;
@@ -1305,10 +2041,12 @@ export default function HomePage() {
           cursor: pointer;
           transition: 0.2s ease;
         }
+
         .quick-quantity button:hover {
           background: #222;
           color: #fff;
         }
+
         .quick-quantity span {
           width: 55px;
           height: 46px;
@@ -1322,6 +2060,7 @@ export default function HomePage() {
           font-weight: 600;
           box-sizing: border-box;
         }
+
         .quick-add-cart {
           width: 100%;
           height: 50px;
@@ -1340,12 +2079,14 @@ export default function HomePage() {
           cursor: pointer;
           transition: 0.2s ease;
         }
+
         .quick-add-cart:hover {
           background: #333;
           transform: translateY(-1px);
           box-shadow: 0 7px 18px
             rgba(0, 0, 0, 0.18);
         }
+
         .quick-add-cart:disabled {
           background: #999 !important;
           color: #fff !important;
@@ -1354,6 +2095,7 @@ export default function HomePage() {
           transform: none !important;
           box-shadow: none !important;
         }
+
         .quick-loading {
           width: 100%;
           min-height: 400px;
@@ -1363,255 +2105,352 @@ export default function HomePage() {
           color: #555;
           font-size: 18px;
         }
+
         @media (min-width: 1400px) {
           .premium-section {
             padding: 45px 40px;
           }
-          .premium-grid {grid-template-columns: repeat(5, minmax(0, 1fr));
+
+          .premium-grid {
+            grid-template-columns: repeat(
+              5,
+              minmax(0, 1fr)
+            );
             gap: 25px;
           }
+
           .nutrition-banner img {
             height: 450px;
           }
+
           .premium-image {
             height: 320px;
           }
+
           .quick-view-box {
             width: 950px;
           }
+
           .quick-view-image img {
             max-width: 420px;
             height: 420px;
           }
         }
+
         @media (min-width: 1025px) and (max-width: 1399px) {
           .premium-section {
             padding: 35px 25px;
           }
-          .premium-grid {grid-template-columns: repeat(4, minmax(0, 1fr));
+
+          .premium-grid {
+            grid-template-columns: repeat(
+              4,
+              minmax(0, 1fr)
+            );
             gap: 20px;
           }
+
           .premium-image {
             height: 280px;
           }
+
           .nutrition-banner img {
             height: 380px;
           }
+
           .premium-main-title {
             font-size: 32px;
           }
         }
+
         @media (max-width: 1024px) {
           .category-row {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(
+              3,
+              minmax(0, 1fr)
+            );
           }
+
           .premium-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(
+              3,
+              minmax(0, 1fr)
+            );
           }
+
           .hero-banner {
             height: 300px;
             margin-top: 80px;
           }
+
           .banner-slider img {
             height: 300px;
           }
+
           .premium-image {
             height: 260px;
           }
         }
+
         @media (max-width: 768px) {
           .hero-banner {
             height: 230px;
             margin-top: 36px;
           }
+
           .banner-slider img {
             width: 100%;
             height: 300px;
             object-fit: contain;
             object-position: center;
           }
+
           .slider-btn {
             width: 42px;
             height: 42px;
             font-size: 18px;
             margin-top: 25px;
           }
+
           .category-section {
             padding: 25px 15px;
           }
+
           .section-title {
             font-size: 30px;
             margin-bottom: 25px;
           }
-          .category-row {grid-template-columns: repeat(2, minmax(0, 1fr) );
+
+          .category-row {
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
             gap: 15px;
           }
+
           .category-card {
             height: 250px;
           }
+
           .category-img {
             height: 190px;
           }
+
           .premium-section {
             padding: 25px 15px;
           }
-          .premium-grid {grid-template-columns: repeat(2, minmax(0, 1fr));
+
+          .premium-grid {
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
             gap: 15px;
           }
+
           .premium-main-title {
             font-size: 28px;
           }
+
           .premium-image {
             height: 230px;
           }
+
           .nutrition-banner img {
             width: 100%;
             height: 165px;
             object-fit: contain;
             object-position: center;
           }
+
           .quick-view-box {
             width: 94%;
             max-width: 620px;
             max-height: 90vh;
             overflow-y: auto;
           }
+
           .quick-view-content {
             flex-direction: column;
             min-height: auto;
           }
+
           .quick-view-image {
             width: 100%;
             height: 280px;
             min-height: 280px;
           }
+
           .quick-view-image img {
             max-width: 280px;
             height: 240px;
           }
+
           .quick-view-details {
             width: 100%;
             padding: 30px 25px;
           }
         }
+
         @media (max-width: 480px) {
           .hero-banner {
             height: 150px;
             margin-top: 65px;
           }
+
           .banner-slider img {
             height: 150px;
           }
+
           .slider-btn {
             width: 34px;
             height: 34px;
             font-size: 14px;
           }
+
           .prev-btn {
             left: 7px;
           }
+
           .next-btn {
             right: 7px;
           }
+
           .category-section {
             padding: 20px 10px;
           }
+
           .section-title {
             font-size: 24px;
             margin-bottom: 20px;
           }
-          .category-row {grid-template-columns: repeat(2,minmax(0, 1fr));
+
+          .category-row {
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
             gap: 10px;
           }
+
           .category-card {
             height: 190px;
             border-radius: 8px;
           }
+
           .category-img {
             height: 140px;
           }
+
           .category-title {
             font-size: 13px;
           }
+
           .premium-section {
             padding: 20px 10px;
           }
+
           .premium-header {
             margin-bottom: 18px;
             gap: 10px;
           }
+
           .premium-main-title {
             font-size: 21px;
             line-height: 1.3;
           }
+
           .premium-view-btn {
             padding: 7px 11px;
             font-size: 11px;
             white-space: nowrap;
           }
-          .premium-grid { grid-template-columns: repeat(2,minmax(0, 1fr));
+
+          .premium-grid {
+            grid-template-columns: repeat(
+              2,
+              minmax(0, 1fr)
+            );
             gap: 10px;
           }
+
           .premium-card {
             border-radius: 7px;
           }
+
           .premium-image {
             height: 190px;
           }
+
           .premium-content {
             min-height: 70px;
             height: auto;
             padding: 7px 5px;
           }
+
           .premium-title {
             font-size: 13px;
             line-height: 1.3;
           }
+
           .product-price {
             gap: 5px;
           }
+
           .old-price {
             font-size: 11px;
           }
+
           .current-price {
             font-size: 13px;
           }
+
           .nutrition-banner {
             margin: 12px 0;
           }
+
           .nutrition-banner img {
             height: 170px;
           }
+
           .sale-badge {
             top: 8px;
             padding: 5px 8px;
             font-size: 9px;
           }
+
           .product-hover-actions {
             top: 8px;
             right: 8px;
             gap: 6px;
           }
+
           .hover-action {
             width: 34px;
             height: 34px;
             font-size: 13px;
           }
+
           .product-bottom-action {
             left: 8px;
             right: 8px;
             bottom: 5px;
           }
+
           .select-option-btn {
             height: 38px;
             font-size: 9px;
           }
+
           .option-cart {
             font-size: 15px;
           }
+
           .quick-view-modal {
             padding: 8px;
           }
+
           .quick-view-box {
             width: 100%;
             max-width: 100%;
@@ -1619,50 +2458,62 @@ export default function HomePage() {
             border-radius: 9px;
             overflow-y: auto;
           }
+
           .quick-view-image {
             height: 210px;
             min-height: 210px;
             padding: 12px;
           }
+
           .quick-view-image img {
             max-width: 220px;
             height: 185px;
           }
+
           .quick-view-details {
             padding: 22px 16px 18px;
           }
+
           .quick-view-details h2 {
             margin: 0 35px 10px 0;
             font-size: 18px;
           }
+
           .quick-view-price {
             font-size: 18px;
             margin-bottom: 13px;
           }
+
           .quick-view-description {
             font-size: 12px;
             line-height: 1.6;
             max-height: 75px;
             overflow-y: auto;
           }
+
           .quick-view-select {
             height: 42px;
           }
+
           .quick-quantity {
             height: 42px;
           }
+
           .quick-quantity button {
             width: 40px;
             height: 42px;
           }
+
           .quick-quantity span {
             width: 48px;
             height: 42px;
           }
+
           .quick-add-cart {
             height: 45px;
             font-size: 11px;
           }
+
           .quick-view-close {
             top: 7px;
             right: 7px;
@@ -1671,47 +2522,67 @@ export default function HomePage() {
             font-size: 21px;
           }
         }
+
         @media (max-width: 359px) {
-          .premium-grid, .product-row, .category-row {
+          .premium-grid,
+          .product-row,
+          .category-row {
             grid-template-columns: 1fr;
           }
+
           .premium-image {
             height: 250px;
           }
+
           .category-card {
             height: auto;
           }
+
           .category-img {
             height: 200px;
           }
         }
+
         @media (hover: none) and (pointer: coarse) {
           .premium-card:hover,
           .category-card:hover {
             transform: none;
           }
+
           .product-hover-actions {
             opacity: 1;
             visibility: visible;
             transform: translateX(0);
           }
+
           .product-bottom-action {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
           }
+
           .hover-action:hover {
             transform: none;
           }
+
           .select-option-btn:hover {
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(
+              255,
+              255,
+              255,
+              0.75
+            );
             color: #111;
           }
-          .select-option-btn:hover .option-text {
+
+          .select-option-btn:hover
+            .option-text {
             opacity: 1;
             visibility: visible;
           }
-          .select-option-btn:hover .option-cart {
+
+          .select-option-btn:hover
+            .option-cart {
             opacity: 0;
             visibility: hidden;
           }

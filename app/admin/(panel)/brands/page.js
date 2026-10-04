@@ -21,7 +21,13 @@ export default function BrandsPage() {
       console.error("Load brands error:", error);
     }
   };
-  useEffect(() => {loadBrands(); }, []);
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    loadBrands();
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [loadBrands]);
   const openAddModal = () => {
     setEditingBrand(null);
     setBrandName("");
