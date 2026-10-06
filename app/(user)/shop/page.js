@@ -1,396 +1,134 @@
 "use client";
-
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
 function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [minPrice, setMinPrice] = useState(
-    searchParams.get("min_price") || "30"
-  );
-  const [maxPrice, setMaxPrice] = useState(
-    searchParams.get("max_price") || "2000"
-  );
-  const [showCount, setShowCount] = useState(
-    searchParams.get("show") || "9"
-  );
-  const [sortValue, setSortValue] = useState(
-    searchParams.get("sort") || "default"
-  );
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [openCategories, setOpenCategories] = useState({
-    Dates: false,
-    Nuts: false,
-  });
-
+  const [loading, setLoading] = useState(true);  const [minPrice, setMinPrice] = useState(searchParams.get("min_price") || "30");
+  const [maxPrice, setMaxPrice] = useState(searchParams.get("max_price") || "2000");
+  const [showCount, setShowCount] = useState(searchParams.get("show") || "9");
+  const [sortValue, setSortValue] = useState(searchParams.get("sort") || "default");
+  const [sidebarOpen, setSidebarOpen] = useState(false);  
+  const [openCategories, setOpenCategories] = useState({Dates: false, Nuts: false,});
   const [wishlistIds, setWishlistIds] = useState([]);
   const [compareIds, setCompareIds] = useState([]);
-
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickProduct, setQuickProduct] = useState(null);
-
   const [cartPopupProduct, setCartPopupProduct] = useState(null);
   const [selectedWeight, setSelectedWeight] = useState("");
   const [cartQuantity, setCartQuantity] = useState(1);
-
+  const [wishlistItems, setWishlistItems] = useState([]);
   const categories = [
-    {
-      name: "Berries",
-    },
-    {
-      name: "Bulk / Wholesale",
-    },
-    {
-      name: "Combo Offers",
-    },
-    {
-      name: "Combos & Gift Packs",
-    },
+    {name: "Berries",},
+    {name: "Bulk / Wholesale",},
+    {name: "Combo Offers",},
+    {name: "Combos & Gift Packs",},
     {
       name: "Dates",
       children: ["Dry Dates", "Premium Dates"],
     },
-    {
-      name: "Dry Fruits",
-    },
-    {
-      name: "Flavoured Nuts",
-    },
-    {
-      name: "Hampers",
-    },
-    {
-      name: "Jumbo & Premium",
-    },
-    {
-      name: "Mixes & Snacking",
-    },
+    {name: "Dry Fruits",},
+    {name: "Flavoured Nuts",},
+    {name: "Hampers",},
+    {name: "Jumbo & Premium",},
+    {name: "Mixes & Snacking",},
     {
       name: "Nuts",
-      children: [
-        "Almonds",
-        "Cashews",
-        "Pistachios",
-        "Walnuts",
-      ],
+      children: ["Almonds", "Cashews", "Pistachios", "Walnuts",],
     },
-    {
-      name: "Powders",
-    },
-    {
-      name: "Seeds",
-    },
-    {
-      name: "Uncategorized",
-    },
+    {name: "Powders",},
+    {name: "Seeds",},
+    {name: "Uncategorized",},
   ];
-
-  /* =========================================================
-     PRODUCT HELPERS
-  ========================================================= */
-
-  const getProductId = (product) => {
-    return (
-      product?._id ||
-      product?.id ||
-      product?.product_id ||
-      product?.productId
-    );
-  };
-
-  const getProductName = (product) => {
-    return (
-      product?.productName ||
-      product?.product_name ||
-      product?.product_title ||
-      product?.name ||
-      product?.title ||
-      "Product"
-    );
-  };
-
-  const getProductCategory = (product) => {
-    return (
-      product?.category_name ||
-      product?.category ||
-      product?.product_category ||
-      product?.categoryName ||
-      ""
-    );
-  };
-
-  const getOriginalPrice = (product) => {
-    return (
-      Number(
-        product?.originalPrice ??
-          product?.original_price ??
-          product?.mrp ??
-          product?.price ??
-          0
-      ) || 0
-    );
-  };
-
-  const getOfferPrice = (product) => {
-    return (
-      Number(
-        product?.offerPrice ??
-          product?.offer_price ??
-          product?.salePrice ??
-          product?.sale_price ??
-          0
-      ) || 0
-    );
-  };
-
+  const getProductId = (product) => {return (product?._id || product?.id || product?.product_id || product?.productId);};
+  const getProductName = (product) => {return (product?.productName || product?.product_name || product?.product_title || product?.name || product?.title || "Product");};
+  const getProductCategory = (product) => {return (product?.category_name || product?.category || product?.product_category || product?.categoryName || "");};
+  const getOriginalPrice = (product) => {return (Number(product?.originalPrice ?? product?.original_price ?? product?.mrp ?? product?.price ?? 0) || 0);};
+  const getOfferPrice = (product) => {return (Number(product?.offerPrice ?? product?.offer_price ?? product?.salePrice ?? product?.sale_price ?? 0) || 0);};
   const hasOffer = (product) => {
     const originalPrice = getOriginalPrice(product);
     const offerPrice = getOfferPrice(product);
-
-    return (
-      offerPrice > 0 &&
-      originalPrice > 0 &&
-      offerPrice < originalPrice
-    );
+    return (offerPrice > 0 && originalPrice > 0 && offerPrice < originalPrice);
   };
-
   const getDisplayPrice = (product) => {
     const originalPrice = getOriginalPrice(product);
     const offerPrice = getOfferPrice(product);
-
     if (offerPrice > 0 && offerPrice < originalPrice) {
       return offerPrice;
     }
-
     if (offerPrice > 0) {
       return offerPrice;
     }
-
     return originalPrice;
   };
-
-  /* =========================================================
-     IMAGE HELPERS
-  ========================================================= */
-
   const getProductImages = (product) => {
     const images = [];
-
-    const directImages = [
-      product?.product_image,
-      product?.productImage,
-      product?.image,
-      product?.image_url,
-      product?.imageUrl,
-      product?.thumbnail,
-      product?.thumbnail_url,
-      product?.thumbnailUrl,
-    ];
-
+    const directImages = [product?.product_image, product?.productImage, product?.image, product?.image_url, product?.imageUrl, product?.thumbnail, product?.thumbnail_url, product?.thumbnailUrl,];
     directImages.forEach((image) => {
       if (typeof image === "string" && image.trim()) {
         images.push(image.trim());
       }
     });
-
-    const imageArrays = [
-      product?.images,
-      product?.product_images,
-      product?.gallery,
-      product?.gallery_images,
-      product?.productImages,
-    ];
-
+    const imageArrays = [product?.images, product?.product_images, product?.gallery, product?.gallery_images, product?.productImages,];
     imageArrays.forEach((imageArray) => {
       if (!Array.isArray(imageArray)) {
         return;
       }
-
       imageArray.forEach((item) => {
         if (typeof item === "string" && item.trim()) {
           images.push(item.trim());
         }
-
         if (typeof item === "object" && item !== null) {
-          const image =
-            item.url ||
-            item.image ||
-            item.image_url ||
-            item.src;
-
+          const image = item.url || item.image || item.image_url || item.src;
           if (typeof image === "string" && image.trim()) {
             images.push(image.trim());
           }
         }
       });
     });
-
     return [...new Set(images)];
   };
-
   const getProductImage = (product) => {
     const images = getProductImages(product);
-
     return images[0] || "/uploads/no-image.png";
   };
-
   const getProductSecondImage = (product) => {
     const images = getProductImages(product);
-
     return images[1] || "";
   };
-
-  /* =========================================================
-     OTHER HELPERS
-  ========================================================= */
-
-  const getProductRating = (product) => {
-    return (
-      Number(
-        product?.rating ??
-          product?.average_rating ??
-          product?.averageRating ??
-          0
-      ) || 0
-    );
-  };
-
-  const getProductPopularity = (product) => {
-    return (
-      Number(
-        product?.popularity ??
-          product?.sales_count ??
-          product?.salesCount ??
-          product?.views ??
-          0
-      ) || 0
-    );
-  };
-
-  const getProductDate = (product) => {
-    return (
-      product?.createdAt ||
-      product?.created_at ||
-      product?.date ||
-      ""
-    );
-  };
-
+  const getProductRating = (product) => {return (Number(product?.rating ?? product?.average_rating ?? product?.averageRating ?? 0) || 0);};
+  const getProductPopularity = (product) => {return (Number(product?.popularity ?? product?.sales_count ?? product?.salesCount ?? product?.views ?? 0) || 0);};
+  const getProductDate = (product) => {return (product?.createdAt || product?.created_at || product?.date || "");};
   const isInStock = (product) => {
-    const status = String(
-      product?.status ??
-        product?.stock_status ??
-        product?.stockStatus ??
-        ""
-    )
-      .trim()
-      .toLowerCase();
-
-    return [
-      "currently available",
-      "available",
-      "in stock",
-      "instock",
-      "active",
-    ].includes(status);
+    const status = String(product?.status ?? product?.stock_status ?? product?.stockStatus ?? "").trim().toLowerCase();
+    return ["currently available", "available", "in stock", "instock", "active",].includes(status);
   };
-
-  /* =========================================================
-     WEIGHT OPTIONS
-  ========================================================= */
-
   const getWeightOptions = (product) => {
     const basePrice = getDisplayPrice(product);
-
-    const possibleOptions =
-      product?.weight_options ||
-      product?.weightOptions ||
-      product?.weights ||
-      product?.variants ||
-      product?.product_variants;
-
+    const possibleOptions = product?.weight_options || product?.weightOptions || product?.weights || product?.variants || product?.product_variants;
     if (Array.isArray(possibleOptions)) {
       const parsed = [];
-
       possibleOptions.forEach((item) => {
         if (typeof item === "string") {
           const text = item.trim();
-
-          if (
-            text === "250g" ||
-            text === "500g" ||
-            text === "1kg"
-          ) {
-            parsed.push({
-              label: text,
-              price: basePrice,
-            });
+          if (text === "250g" || text === "500g" || text === "1kg") {
+            parsed.push({label: text, price: basePrice,});
           }
         }
-
-        if (
-          typeof item === "object" &&
-          item !== null
-        ) {
-          const label =
-            item.weight ||
-            item.label ||
-            item.name ||
-            item.size;
-
-          const price =
-            Number(
-              item.offerPrice ??
-                item.offer_price ??
-                item.salePrice ??
-                item.sale_price ??
-                item.price ??
-                item.amount ??
-                0
-            ) || 0;
-
-          if (
-            label &&
-            (
-              String(label)
-                .toLowerCase()
-                .includes("250") ||
-              String(label)
-                .toLowerCase()
-                .includes("500") ||
-              String(label)
-                .toLowerCase()
-                .includes("1kg") ||
-              String(label)
-                .toLowerCase()
-                .includes("1 kg")
-            )
-          ) {
-            parsed.push({
-              label: String(label),
-              price: price > 0 ? price : basePrice,
-            });
+        if (typeof item === "object" && item !== null) {
+          const label = item.weight || item.label || item.name || item.size;
+          const price = Number(item.offerPrice ?? item.offer_price ?? item.salePrice ?? item.sale_price ?? item.price ?? item.amount ?? 0) || 0;
+          if (label && (String(label).toLowerCase().includes("250") || String(label).toLowerCase().includes("500") || String(label).toLowerCase().includes("1kg") || String(label).toLowerCase().includes("1 kg"))) {
+            parsed.push({label: String(label), price: price > 0 ? price : basePrice, });
           }
         }
       });
-
       const unique = [];
       const seen = new Set();
-
       parsed.forEach((item) => {
-        const normalized = item.label
-          .toLowerCase()
-          .replace(/\s/g, "");
-
+        const normalized = item.label.toLowerCase().replace(/\s/g, "");
         let standardLabel = "";
-
         if (normalized.includes("250")) {
           standardLabel = "250g";
         } else if (normalized.includes("500")) {
@@ -401,36 +139,17 @@ function ShopContent() {
         ) {
           standardLabel = "1kg";
         }
-
-        if (
-          standardLabel &&
-          !seen.has(standardLabel)
-        ) {
+        if (standardLabel && !seen.has(standardLabel)) {
           seen.add(standardLabel);
-
-          unique.push({
-            label: standardLabel,
-            price: item.price,
-          });
+          unique.push({label: standardLabel, price: item.price,});
         }
       });
-
       if (unique.length > 0) {
-        const order = {
-          "250g": 1,
-          "500g": 2,
-          "1kg": 3,
-        };
-
-        unique.sort(
-          (a, b) =>
-            order[a.label] - order[b.label]
-        );
-
+        const order = {"250g": 1, "500g": 2, "1kg": 3,};
+        unique.sort((a, b) => order[a.label] - order[b.label]);
         return unique;
       }
     }
-
     return [
       {
         label: "250g",
@@ -446,692 +165,281 @@ function ShopContent() {
       },
     ];
   };
-
   const getCartPopupPrice = (product) => {
     if (!product) {
       return 0;
     }
-
     const options = getWeightOptions(product);
-
-    const selected = options.find(
-      (item) => item.label === selectedWeight
-    );
-
+    const selected = options.find((item) => item.label === selectedWeight);
     return (
       selected?.price ||
       getDisplayPrice(product)
     );
   };
-
-  /* =========================================================
-     CART POPUP
-  ========================================================= */
-
   const openCartPopup = (event, product) => {
     event.stopPropagation();
-
     setCartPopupProduct(product);
-
-    const options = getWeightOptions(product);
-
-    setSelectedWeight(
-      options[0]?.label || "250g"
-    );
-
-    setCartQuantity(1);
-
-    document.body.style.overflow = "hidden";
-  };
-
-  const closeCartPopup = () => {
-    setCartPopupProduct(null);
     setSelectedWeight("");
     setCartQuantity(1);
-
-    document.body.style.overflow = "";
+    document.body.style.overflow = "hidden";
   };
-
+  const closeCartPopup = () => {setCartPopupProduct(null); setSelectedWeight(""); setCartQuantity(1); document.body.style.overflow = "";};
   const decreaseCartQuantity = (event) => {
     event.stopPropagation();
-
-    setCartQuantity((previous) =>
-      Math.max(1, previous - 1)
-    );
+    setCartQuantity((previous) => Math.max(1, previous - 1));
   };
-
   const increaseCartQuantity = (event) => {
     event.stopPropagation();
-
-    setCartQuantity(
-      (previous) => previous + 1
-    );
+    setCartQuantity((previous) => previous + 1);
   };
-
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
-
     if (!cartPopupProduct) {
       return;
     }
-
-    if (!selectedWeight) {
-      alert("Please select weight");
+    const product = cartPopupProduct;
+    const productId = getProductId(product);
+    const weight = selectedWeight;
+    if (!weight) {
+      alert("Please select a weight.");
       return;
     }
-
-    try {
-      const productId =
-        getProductId(cartPopupProduct);
-
-      const productName =
-        getProductName(cartPopupProduct);
-
-      const productImage =
-        getProductImage(cartPopupProduct);
-
-      const options =
-        getWeightOptions(cartPopupProduct);
-
-      const selectedOption =
-        options.find(
-          (option) =>
-            String(option.label) ===
-            String(selectedWeight)
-        );
-
-      const unitPrice =
-        Number(
-          selectedOption?.price ||
-            getDisplayPrice(
-              cartPopupProduct
-            ) ||
-            0
-        );
-
-      const quantity =
-        Math.max(
-          1,
-          Number(cartQuantity) || 1
-        );
-
+    const options = getWeightOptions(product);
+    const selectedOption = options.find(
+      (option) => String(option.label).trim() === String(weight).trim());
+      const price = Number(selectedOption?.price ?? getDisplayPrice(product) ?? 0);
       const cartItem = {
-        id: productId
-          ? String(productId)
-          : String(productName),
-
-        productId: productId
-          ? String(productId)
-          : null,
-
-        name: productName,
-
-        image: productImage,
-
-        weight: selectedWeight,
-
-        quantity,
-
-        price: unitPrice,
-
-        total: unitPrice * quantity,
+        product_id: productId,
+        product_title: getProductName(product),
+        product_image: getProductImage(product),
+        weight: weight,
+        quantity: 1,
+        final_price: price,
       };
-
-      const savedCart =
-        localStorage.getItem("cartItems");
-
+    try {
+      const savedCart = localStorage.getItem("cart");
       let cart = [];
-
       if (savedCart) {
         try {
-          const parsedCart =
-            JSON.parse(savedCart);
-
+          const parsedCart = JSON.parse(savedCart);
           if (Array.isArray(parsedCart)) {
             cart = parsedCart;
           }
-        } catch (error) {
-          console.error(
-            "Cart JSON error:",
-            error
-          );
-
+        } catch {
           cart = [];
         }
       }
-
-      const existingIndex =
-        cart.findIndex(
-          (item) =>
-            String(
-              item.productId ?? item.id
-            ) ===
-              String(
-                cartItem.productId ??
-                  cartItem.id
-              ) &&
-            String(item.weight) ===
-              String(cartItem.weight)
-        );
-
+      const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && String(item.weight) === String(weight));
       if (existingIndex !== -1) {
-        const oldQuantity =
-          Number(
-            cart[existingIndex].quantity
-          ) || 0;
-
-        const newQuantity =
-          oldQuantity + quantity;
-
-        cart[existingIndex] = {
-          ...cart[existingIndex],
-          quantity: newQuantity,
-          price: unitPrice,
-          total:
-            unitPrice * newQuantity,
-        };
+        const newQuantity = Number(cart[existingIndex].quantity || 0) + 1;
+        cart[existingIndex].quantity = newQuantity;
+        cart[existingIndex].final_price = Number(price) * newQuantity;
       } else {
         cart.push(cartItem);
       }
-
-      localStorage.setItem(
-        "cartItems",
-        JSON.stringify(cart)
-      );
-
-      window.dispatchEvent(
-        new Event("cartUpdated")
-      );
-
-      closeCartPopup();
+      localStorage.setItem("cart", JSON.stringify(cart));
+      sessionStorage.setItem("openCartAfterRefresh", "true");
+      window.dispatchEvent(new Event("cartUpdated"));
+      window.location.reload();
     } catch (error) {
-      console.error(
-        "ADD TO CART ERROR:",
-        error
-      );
+      console.error("Add cart error:", error);
     }
   };
-
-  /* =========================================================
-     WISHLIST
-  ========================================================= */
-
   const saveWishlist = (ids) => {
     try {
-      localStorage.setItem(
-        "wishlistIds",
-        JSON.stringify(ids)
-      );
-
-      window.dispatchEvent(
-        new Event("wishlistUpdated")
-      );
+      localStorage.setItem("wishlistIds", JSON.stringify(ids));
+      window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (error) {
-      console.error(
-        "Wishlist save error:",
-        error
-      );
+      console.error("Wishlist save error:", error);
     }
   };
+  const handleWishlist = (event, product) => {
+  event.stopPropagation();
 
-  const handleWishlistClick = (
-    event,
-    product
-  ) => {
-    event.stopPropagation();
+  const productId = getProductId(product);
 
-    const id = getProductId(product);
+  if (!productId) return;
 
-    if (!id) {
-      return;
+  setWishlistItems((prev) => {
+    if (prev.includes(productId)) {
+      return prev.filter((id) => id !== productId);
     }
 
-    const stringId = String(id);
-
-    setWishlistIds((previous) => {
-      let updated;
-
-      if (previous.includes(stringId)) {
-        updated = previous.filter(
-          (item) => item !== stringId
-        );
-      } else {
-        updated = [
-          ...previous,
-          stringId,
-        ];
-      }
-
-      saveWishlist(updated);
-
-      return updated;
-    });
-  };
-
-  /* =========================================================
-     COMPARE
-  ========================================================= */
-
+    return [...prev, productId];
+  });
+};
   const saveCompare = (ids) => {
     try {
-      localStorage.setItem(
-        "compareIds",
-        JSON.stringify(ids)
-      );
-
-      window.dispatchEvent(
-        new Event("compareUpdated")
-      );
+      localStorage.setItem("compareIds", JSON.stringify(ids));
+      window.dispatchEvent(new Event("compareUpdated"));
     } catch (error) {
-      console.error(
-        "Compare save error:",
-        error
-      );
+      console.error("Compare save error:", error);
     }
   };
-
-  const handleCompareClick = (
-    event,
-    product
-  ) => {
+  const handleCompareClick = (event, product) => {
     event.stopPropagation();
-
     const id = getProductId(product);
-
     if (!id) {
       return;
     }
-
     const stringId = String(id);
-
     setCompareIds((previous) => {
       let updated;
-
       if (previous.includes(stringId)) {
-        updated = previous.filter(
-          (item) => item !== stringId
-        );
+        updated = previous.filter((item) => item !== stringId);
       } else {
-        updated = [
-          ...previous,
-          stringId,
-        ];
+        updated = [...previous,stringId,];
       }
-
       saveCompare(updated);
-
       return updated;
     });
   };
-
-  /* =========================================================
-     QUICK VIEW
-  ========================================================= */
-
-  const openQuickView = (
-    event,
-    product
-  ) => {
+  const openQuickView = (event, product) => {
     event.stopPropagation();
-
     setQuickProduct(product);
     setQuickViewOpen(true);
-
-    document.body.style.overflow =
-      "hidden";
+    document.body.style.overflow = "hidden";
   };
-
   const closeQuickView = () => {
     setQuickViewOpen(false);
     setQuickProduct(null);
-
     document.body.style.overflow = "";
   };
-
-  /* =========================================================
-     ESCAPE KEY
-  ========================================================= */
-
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key !== "Escape") {
         return;
       }
-
       if (quickViewOpen) {
         closeQuickView();
       }
-
       if (cartPopupProduct) {
         closeCartPopup();
       }
-
       if (sidebarOpen) {
         setSidebarOpen(false);
       }
     };
-
-    document.addEventListener(
-      "keydown",
-      handleEscape
-    );
-
+    document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
-
+      document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [
-    quickViewOpen,
-    cartPopupProduct,
-    sidebarOpen,
-  ]);
-
-  /* =========================================================
-     LOAD PRODUCTS
-  ========================================================= */
-
+  }, [quickViewOpen,cartPopupProduct,sidebarOpen,]);
   useEffect(() => {
     async function loadProducts() {
       try {
         setLoading(true);
-
-        const response =
-          await fetch("/api/home");
-
+        const response = await fetch("/api/home");
         if (!response.ok) {
-          throw new Error(
-            "Failed to load products"
-          );
+          throw new Error("Failed to load products");
         }
-
-        const data =
-          await response.json();
-
+        const data = await response.json();
         const allProducts = [];
-
         if (
           Array.isArray(data?.brands)
         ) {
           data.brands.forEach(
             (brand) => {
-              if (
-                Array.isArray(
-                  brand?.products
-                )
-              ) {
-                brand.products.forEach(
-                  (product) => {
-                    allProducts.push(
-                      product
-                    );
-                  }
-                );
+              if (Array.isArray(brand?.products)) {
+                brand.products.forEach((product) => {allProducts.push(product);});
               }
             }
           );
         }
-
         const uniqueProducts = [];
         const seen = new Set();
-
         allProducts.forEach(
           (product) => {
-            const id =
-              getProductId(product);
-
+            const id = getProductId(product);
             if (!id) {
-              uniqueProducts.push(
-                product
-              );
+              uniqueProducts.push(product);
               return;
             }
-
             const key = String(id);
-
             if (!seen.has(key)) {
               seen.add(key);
-
-              uniqueProducts.push(
-                product
-              );
+              uniqueProducts.push(product);
             }
           }
         );
-
-        setProducts(
-          uniqueProducts
-        );
+        setProducts(uniqueProducts);
       } catch (error) {
-        console.error(
-          "Shop product loading error:",
-          error
-        );
-
+        console.error("Shop product loading error:", error);
         setProducts([]);
       } finally {
         setLoading(false);
       }
     }
-
     loadProducts();
   }, []);
-
-  /* =========================================================
-     URL FILTERS
-  ========================================================= */
-
-  const selectedCategory =
-    searchParams.get("category") ||
-    "Shop";
-
-  const selectedSearch =
-    searchParams.get("search") || "";
-
-  const selectedStock =
-    searchParams.get(
-      "stock_status"
-    ) || "";
-
-  /* =========================================================
-     FILTER PRODUCTS
-  ========================================================= */
-
+  const selectedCategory = searchParams.get("category") || "Shop";
+  const selectedSearch = searchParams.get("search") || "";
+  const selectedStock = searchParams.get("stock_status") || "";
   const filteredProducts = useMemo(() => {
     let result = [...products];
-
-    if (
-      selectedCategory &&
-      selectedCategory !== "Shop"
-    ) {
-      const categoryText =
-        selectedCategory.toLowerCase();
-
+    if (selectedCategory && selectedCategory !== "Shop") {
+      const categoryText = selectedCategory.toLowerCase();
       result = result.filter(
         (product) => {
-          const productCategory =
-            getProductCategory(
-              product
-            ).toLowerCase();
-
-          return (
-            productCategory ===
-              categoryText ||
-            productCategory.includes(
-              categoryText
-            ) ||
-            categoryText.includes(
-              productCategory
-            )
+          const productCategory = getProductCategory(product).toLowerCase();
+          return (productCategory === categoryText || productCategory.includes(categoryText) || categoryText.includes(productCategory)
           );
         }
       );
     }
-
     if (selectedSearch) {
-      const searchText =
-        selectedSearch.toLowerCase();
-
+      const searchText = selectedSearch.toLowerCase();
       result = result.filter(
         (product) => {
-          const name =
-            getProductName(
-              product
-            ).toLowerCase();
-
-          const category =
-            getProductCategory(
-              product
-            ).toLowerCase();
-
-          return (
-            name.includes(
-              searchText
-            ) ||
-            category.includes(
-              searchText
-            )
-          );
+          const name = getProductName(product).toLowerCase();
+          const category = getProductCategory(product).toLowerCase();
+          return (name.includes(searchText) || category.includes(searchText));
         }
       );
     }
-
-    if (
-      selectedStock ===
-      "onsale"
-    ) {
-      result = result.filter(
-        (product) =>
-          hasOffer(product)
-      );
+    if (selectedStock === "onsale") {
+      result = result.filter((product) => hasOffer(product));
     }
-
-    if (
-      selectedStock ===
-      "instock"
-    ) {
-      result = result.filter(
-        (product) =>
-          isInStock(product)
-      );
+    if (selectedStock === "instock") {
+      result = result.filter((product) => isInStock(product));
     }
-
-    const minimum =
-      Number(minPrice) || 0;
-
-    const maximum =
-      Number(maxPrice) || 2000;
-
+    const minimum = Number(minPrice) || 0;
+    const maximum = Number(maxPrice) || 2000;
     result = result.filter(
       (product) => {
-        const price =
-          getDisplayPrice(product);
-
-        return (
-          price >= minimum &&
-          price <= maximum
-        );
+        const price = getDisplayPrice(product);
+        return (price >= minimum && price <= maximum);
       }
     );
-
-    if (
-      sortValue ===
-      "price-low"
-    ) {
-      result.sort(
-        (a, b) =>
-          getDisplayPrice(a) -
-          getDisplayPrice(b)
-      );
+    if (sortValue === "price-low") {
+      result.sort((a, b) => getDisplayPrice(a) - getDisplayPrice(b));
     }
-
-    if (
-      sortValue ===
-      "price-high"
-    ) {
-      result.sort(
-        (a, b) =>
-          getDisplayPrice(b) -
-          getDisplayPrice(a)
-      );
+    if (sortValue === "price-high") {
+      result.sort((a, b) => getDisplayPrice(b) - getDisplayPrice(a));
     }
-
-    if (
-      sortValue === "rating"
-    ) {
-      result.sort(
-        (a, b) =>
-          getProductRating(b) -
-          getProductRating(a)
-      );
+    if (sortValue === "rating") {
+      result.sort((a, b) => getProductRating(b) - getProductRating(a));
     }
-
-    if (
-      sortValue ===
-      "popularity"
-    ) {
-      result.sort(
-        (a, b) =>
-          getProductPopularity(b) -
-          getProductPopularity(a)
-      );
+    if (sortValue === "popularity") {
+      result.sort((a, b) => getProductPopularity(b) - getProductPopularity(a));
     }
-
-    if (
-      sortValue === "latest"
-    ) {
+    if (sortValue === "latest") {
       result.sort(
         (a, b) => {
-          const dateA =
-            new Date(
-              getProductDate(a)
-            ).getTime() || 0;
-
-          const dateB =
-            new Date(
-              getProductDate(b)
-            ).getTime() || 0;
-
+          const dateA = new Date(getProductDate(a)).getTime() || 0;
+          const dateB = new Date(getProductDate(b)).getTime() || 0;
           return dateB - dateA;
         }
       );
     }
-
     return result;
-  }, [
-    products,
-    selectedCategory,
-    selectedSearch,
-    selectedStock,
-    minPrice,
-    maxPrice,
-    sortValue,
-  ]);
-
-  /* =========================================================
-     RANDOM SIDEBAR PRODUCTS
-  ========================================================= */
-
+  }, [products, selectedCategory, selectedSearch, selectedStock, minPrice, maxPrice, sortValue, ]);
   const randomProducts = useMemo(() => {
-    const array = [
-      ...filteredProducts,
-    ];
-
-    for (
-      let i = array.length - 1;
-      i > 0;
-      i--
-    ) {
-      const j =
-        Math.floor(
-          Math.random() *
-            (i + 1)
-        );
-
+    const array = [...filteredProducts,];
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
       [
         array[i],
         array[j],
@@ -1140,223 +448,71 @@ function ShopContent() {
         array[i],
       ];
     }
-
     return array.slice(0, 5);
   }, [filteredProducts]);
-
-  /* =========================================================
-     DISPLAY COUNT
-  ========================================================= */
-
-  const displayedProducts =
-    useMemo(() => {
-      const count =
-        Number(showCount) || 9;
-
-      return filteredProducts.slice(
-        0,
-        count
-      );
-    }, [
-      filteredProducts,
-      showCount,
-    ]);
-
-  /* =========================================================
-     QUERY
-  ========================================================= */
-
-  const createQuery = (
-    changes = {}
-  ) => {
-    const params =
-      new URLSearchParams(
-        searchParams.toString()
-      );
-
-    Object.entries(
-      changes
-    ).forEach(
+  const displayedProducts = useMemo(() => {
+    const count = Number(showCount) || 9;
+    return filteredProducts.slice(0, count);
+  }, [filteredProducts, showCount,]);
+  const createQuery = (changes = {}) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(changes).forEach(
       ([key, value]) => {
-        if (
-          value === null ||
-          value === undefined ||
-          value === ""
-        ) {
+        if (value === null || value === undefined || value === "") {
           params.delete(key);
         } else {
-          params.set(
-            key,
-            value
-          );
+          params.set(key, value);
         }
       }
     );
-
     return params.toString();
   };
-
-  /* =========================================================
-     CATEGORY
-  ========================================================= */
-
-  const handleCategoryClick = (
-    category
-  ) => {
+  const handleCategoryClick = (category) => {
     if (category === "Shop") {
       router.push("/shop");
     } else {
-      const query =
-        createQuery({
-          category,
-        });
-
-      router.push(
-        `/shop?${query}`
-      );
+      const query = createQuery({category,});
+      router.push(`/shop?${query}`);
     }
-
     setSidebarOpen(false);
   };
-
-  /* =========================================================
-     PRICE
-  ========================================================= */
-
-  const handlePriceFilter =
-    () => {
-      const query =
-        createQuery({
-          min_price: minPrice,
-          max_price: maxPrice,
-        });
-
-      router.push(
-        `/shop?${query}`
-      );
-    };
-
-  /* =========================================================
-     STOCK
-  ========================================================= */
-
-  const handleStockChange = (
-    type
-  ) => {
-    const current =
-      searchParams.get(
-        "stock_status"
-      ) || "";
-
-    const newValue =
-      current === type
-        ? ""
-        : type;
-
-    const query =
-      createQuery({
-        stock_status:
-          newValue,
-      });
-
-    router.push(
-      `/shop?${query}`
-    );
+  const handlePriceFilter = () => {
+    const query = createQuery({min_price: minPrice, max_price: maxPrice,});
+    router.push(`/shop?${query}`);
   };
-
-  /* =========================================================
-     SHOW COUNT
-  ========================================================= */
-
-  const handleShowChange = (
-    value
-  ) => {
+  const handleStockChange = (type) => {
+    const current = searchParams.get("stock_status") || "";
+    const newValue = current === type ? "" : type;
+    const query = createQuery({stock_status: newValue,});
+    router.push(`/shop?${query}`);
+  };
+  const handleShowChange = (value) => {
     setShowCount(value);
-
-    const query =
-      createQuery({
-        show: value,
-      });
-
-    router.push(
-      `/shop?${query}`
-    );
+    const query = createQuery({show: value, });
+    router.push(`/shop?${query}`);
   };
-
-  /* =========================================================
-     SORT
-  ========================================================= */
-
-  const handleSortChange = (
-    value
-  ) => {
+  const handleSortChange = (value) => {
     setSortValue(value);
-
-    const query =
-      createQuery({
-        sort: value,
-      });
-
-    router.push(
-      `/shop?${query}`
-    );
+    const query = createQuery({sort: value,});
+    router.push(`/shop?${query}`);
   };
-
-  /* =========================================================
-     CATEGORY TOGGLE
-  ========================================================= */
-
-  const toggleCategory = (
-    category
-  ) => {
-    setOpenCategories(
-      (previous) => ({
-        ...previous,
-        [category]:
-          !previous[category],
-      })
-    );
+  const toggleCategory = (category) => {
+    setOpenCategories((previous) => ({...previous,
+      [category]: !previous[category],
+    }));
   };
-
-  /* =========================================================
-     PRODUCT PAGE
-  ========================================================= */
-
-  const handleProductClick = (
-    product
-  ) => {
-    const id =
-      getProductId(product);
-
-    if (!id) {
+  const handleProductClick = (product) => {
+    const productName = getProductName(product);
+    if (!productName) {
       return;
     }
-
-    router.push(
-      `/product/${id}`
-    );
+    const slug = productName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    router.push(`/product/${slug}`);
   };
-
-  /* =========================================================
-     SELECT OPTIONS
-  ========================================================= */
-
-  const handleSelectOptions = (
-    event,
-    product
-  ) => {
+  const handleSelectOptions = (event, product) => {
     event.stopPropagation();
-
-    openCartPopup(
-      event,
-      product
-    );
+    openCartPopup(event, product);
   };
-
-  /* =========================================================
-     JSX
-  ========================================================= */
-
   return (
     <>
       <style jsx>{`
@@ -1366,7 +522,6 @@ function ShopContent() {
           height: 500px;
           overflow: hidden;
         }
-
         .shopHeroImage {
           position: absolute;
           inset: 0;
@@ -1374,7 +529,6 @@ function ShopContent() {
           height: 100%;
           object-fit: cover;
         }
-
         .shopHeroOverlay {
           position: absolute;
           inset: 0;
@@ -1382,7 +536,6 @@ function ShopContent() {
           align-items: center;
           justify-content: center;
         }
-
         .shopHeroOverlay h1 {
           margin: 0;
           color: #fff;
@@ -1390,21 +543,12 @@ function ShopContent() {
           font-weight: 700;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
-
         .shopBody {
           width: 100%;
           min-height: 700px;
           padding: 50px 6%;
-          background: linear-gradient(
-            135deg,
-            #fff0dc 0%,
-            #ffe3c2 30%,
-            #ffd0b0 55%,
-            #f8b0a0 75%,
-            #f28f82 100%
-          );
+          background: linear-gradient(135deg, #fff0dc 0%, #ffe3c2 30%, #ffd0b0 55%, #f8b0a0 75%, #f28f82 100%);
         }
-
         .shopLayout {
           width: 100%;
           max-width: 1400px;
@@ -1413,30 +557,25 @@ function ShopContent() {
           grid-template-columns: 270px minmax(0, 1fr);
           column-gap: 70px;
         }
-
         .shopSidebar {
           width: 100%;
           color: #000;
         }
-
         .sidebarSection {
           margin-bottom: 35px;
         }
-
         .sidebarTitle {
           margin: 0 0 18px;
           color: #000;
           font-size: 18px;
           font-weight: 700;
         }
-
         .rangeSlider {
           position: relative;
           width: 100%;
           height: 25px;
           margin-top: 12px;
         }
-
         .rangeTrack {
           position: absolute;
           left: 0;
@@ -1445,7 +584,6 @@ function ShopContent() {
           height: 3px;
           background: #222;
         }
-
         .rangeDot {
           position: absolute;
           width: 13px;
@@ -1455,7 +593,6 @@ function ShopContent() {
           background: #000;
           transform: translateX(-50%);
         }
-
         .priceBottom {
           display: flex;
           align-items: center;
@@ -1463,13 +600,11 @@ function ShopContent() {
           gap: 10px;
           margin-top: 4px;
         }
-
         .priceText {
           color: #000;
           font-size: 13px;
           white-space: nowrap;
         }
-
         .filterButton {
           height: 34px;
           padding: 0 14px;
@@ -1479,12 +614,10 @@ function ShopContent() {
           font-size: 12px;
           cursor: pointer;
         }
-
         .filterButton:hover {
           background: #222;
           color: #fff;
         }
-
         .stockOption {
           display: flex;
           align-items: center;
@@ -1494,7 +627,6 @@ function ShopContent() {
           font-size: 14px;
           cursor: pointer;
         }
-
         .customCheckbox {
           width: 16px;
           height: 16px;
@@ -1504,20 +636,16 @@ function ShopContent() {
           border: 1px solid #222;
           background: #fff;
         }
-
         .customCheckbox.checked {
           background: #000;
           color: #fff;
         }
-
         .customCheckbox i {
           font-size: 10px;
         }
-
         .categoryItem {
           margin-bottom: 11px;
         }
-
         .categoryRow {
           display: flex;
           align-items: center;
@@ -1526,18 +654,15 @@ function ShopContent() {
           font-size: 14px;
           cursor: pointer;
         }
-
         .categoryRow:hover {
           text-decoration: underline;
         }
-
         .categoryRowWithArrow {
           display: flex;
           align-items: center;
           justify-content: space-between;
           width: 100%;
         }
-
         .categoryArrow {
           width: 22px;
           height: 22px;
@@ -1548,27 +673,22 @@ function ShopContent() {
           font-size: 12px;
           cursor: pointer;
         }
-
         .categoryChildren {
           padding-left: 17px;
           padding-top: 8px;
         }
-
         .childCategory {
           margin-bottom: 9px;
           color: #000;
           font-size: 13px;
           cursor: pointer;
         }
-
         .childCategory:hover {
           text-decoration: underline;
         }
-
         .sidebarProducts {
           margin-top: 5px;
         }
-
         .sidebarProduct {
           display: flex;
           align-items: flex-start;
@@ -1576,7 +696,6 @@ function ShopContent() {
           margin-bottom: 20px;
           cursor: pointer;
         }
-
         .sidebarProductImageBox {
           flex: 0 0 105px;
           width: 105px;
@@ -1588,18 +707,15 @@ function ShopContent() {
           border: 1px solid rgba(0, 0, 0, 0.12);
           overflow: hidden;
         }
-
         .sidebarProductImage {
           width: 100%;
           height: 100%;
           object-fit: contain;
         }
-
         .sidebarProductInfo {
           min-width: 0;
           padding-top: 3px;
         }
-
         .sidebarProductName {
           margin: 0;
           color: #000;
@@ -1607,7 +723,6 @@ function ShopContent() {
           font-weight: 600;
           line-height: 1.35;
         }
-
         .sidebarProductPrice {
           margin-top: 7px;
           display: flex;
@@ -1615,24 +730,20 @@ function ShopContent() {
           gap: 7px;
           flex-wrap: wrap;
         }
-
         .sidebarOriginalPrice {
           color: #777;
           font-size: 12px;
           text-decoration: line-through;
         }
-
         .sidebarOfferPrice {
           color: #d62828;
           font-size: 14px;
           font-weight: 700;
         }
-
         .shopTopBar {
           width: 100%;
           margin-bottom: 25px;
         }
-
         .shopTopRow {
           width: 100%;
           display: flex;
@@ -1640,7 +751,6 @@ function ShopContent() {
           justify-content: space-between;
           gap: 20px;
         }
-
         .breadcrumb {
           display: flex;
           align-items: center;
@@ -1649,15 +759,12 @@ function ShopContent() {
           font-size: 14px;
           color: #222;
         }
-
         .breadcrumbHome {
           cursor: pointer;
         }
-
         .breadcrumbArrow {
           font-size: 16px;
         }
-
         .shopControls {
           margin-left: auto;
           display: flex;
@@ -1665,7 +772,6 @@ function ShopContent() {
           gap: 25px;
           white-space: nowrap;
         }
-
         .showControls {
           display: flex;
           align-items: center;
@@ -1675,17 +781,14 @@ function ShopContent() {
           color: #000;
           margin-left: 55px;
         }
-
         .showNumber {
           padding: 2px 4px;
           color: #000;
           cursor: pointer;
         }
-
         .showNumber.active {
           font-weight: 700;
         }
-
         .sortSelect {
           width: 190px;
           height: 38px;
@@ -1696,24 +799,20 @@ function ShopContent() {
           font-size: 13px;
           cursor: pointer;
         }
-
         .shopMain {
           width: 100%;
           min-width: 0;
         }
-
         .productsGrid {
           width: 100%;
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 30px 20px;
         }
-
         .productCard {
           width: 100%;
           cursor: pointer;
         }
-
         .productImageBox {
           position: relative;
           width: 100%;
@@ -1722,15 +821,13 @@ function ShopContent() {
           background: #fff;
           border: 1px solid rgba(0, 0, 0, 0.08);
         }
-
         .productImage {
           width: 100%;
           height: 100%;
           display: block;
-          object-fit: cover;
+          object-fit: contain;
           transition: transform 0.35s ease;
         }
-
         .productImageSecond {
           position: absolute;
           inset: 0;
@@ -1738,15 +835,12 @@ function ShopContent() {
           transition: opacity 0.35s ease,
             transform 0.35s ease;
         }
-
         .productCard:hover .productImage {
           transform: scale(1.03);
         }
-
         .productCard:hover .productImageSecond {
           opacity: 1;
         }
-
         .productHoverActions {
           position: absolute;
           top: 15px;
@@ -1762,14 +856,11 @@ function ShopContent() {
             transform 0.3s ease;
           z-index: 30;
         }
-
-        .productImageBox:hover
-          .productHoverActions {
+        .productImageBox:hover .productHoverActions {
           opacity: 1;
           visibility: visible;
           transform: translateX(0);
         }
-
         .productHoverAction {
           width: 38px;
           height: 38px;
@@ -1781,28 +872,21 @@ function ShopContent() {
           background: #fff;
           color: #000;
           cursor: pointer;
-          box-shadow: 0 2px 8px
-            rgba(0, 0, 0, 0.16);
-          transition: background 0.2s ease,
-            color 0.2s ease,
-            transform 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+          transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
         }
-
         .productHoverAction:hover {
           background: #000;
           color: #fff;
           transform: scale(1.06);
         }
-
         .productHoverAction.active {
           background: #000;
           color: #fff;
         }
-
         .productHoverAction i {
           font-size: 15px;
         }
-
         .productOptionsButton {
           position: absolute;
           left: 15px;
@@ -1821,45 +905,32 @@ function ShopContent() {
           opacity: 0;
           visibility: hidden;
           transform: translateY(15px);
-          transition: opacity 0.3s ease,
-            visibility 0.3s ease,
-            transform 0.3s ease,
-            background 0.2s ease,
-            color 0.2s ease;
+          transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background 0.2s ease, color 0.2s ease;
           z-index: 50;
         }
-
-        .productImageBox:hover
-          .productOptionsButton {
+        .productImageBox:hover .productOptionsButton {
           opacity: 1;
           visibility: visible;
           transform: translateY(0);
         }
-
         .productOptionsButton:hover {
           background: #000;
           color: #fff;
         }
-
         .productOptionsText {
           display: block;
         }
-
         .productOptionsCartIcon {
           display: none;
           font-size: 18px;
         }
-
         .productOptionsButton:hover
           .productOptionsText {
           display: none;
         }
-
-        .productOptionsButton:hover
-          .productOptionsCartIcon {
+        .productOptionsButton:hover .productOptionsCartIcon {
           display: block;
         }
-
         .productCardName {
           margin: 12px 0 0;
           color: #000;
@@ -1868,7 +939,6 @@ function ShopContent() {
           line-height: 1.4;
           text-align: center;
         }
-
         .productPrice {
           margin-top: 7px;
           display: flex;
@@ -1877,19 +947,16 @@ function ShopContent() {
           gap: 8px;
           font-size: 14px;
         }
-
         .originalPrice {
           color: #777;
           font-size: 13px;
           text-decoration: line-through;
         }
-
         .offerPrice {
           color: #d62828;
           font-size: 15px;
           font-weight: 700;
         }
-
         .noImage {
           width: 100%;
           height: 100%;
@@ -1900,7 +967,6 @@ function ShopContent() {
           background: #eee;
           font-size: 13px;
         }
-
         .emptyProducts {
           width: 100%;
           padding: 60px 20px;
@@ -1908,72 +974,90 @@ function ShopContent() {
           color: #000;
           font-size: 15px;
         }
-
         .productCartPopup {
           position: absolute;
           inset: 0;
-          z-index: 100;
+          z-index: 20;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 12px;
-          background: rgba(
-            255,
-            255,
-            255,
-            0.97
-          );
-          animation: productPopupIn
-            0.22s ease;
+          background: rgba(255, 255, 255, 0.96);
+          padding: 20px;
         }
-
         @keyframes productPopupIn {
           from {
             opacity: 0;
             transform: scale(0.96);
           }
-
           to {
             opacity: 1;
             transform: scale(1);
           }
         }
-
         .productCartPopupInner {
-          position: relative;
           width: 100%;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 18px 15px 14px;
+          max-width: 320px;
           background: #fff;
+          padding: 25px;
+          border-radius: 12px;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+          position: relative;
         }
-
         .productCartPopupClose {
           position: absolute;
-          top: 7px;
-          right: 7px;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          top: 8px;
+          right: 10px;
+          width: 30px;
+          height: 30px;
           border: none;
-          border-radius: 50%;
+          background: transparent;
+          font-size: 24px;
+          cursor: pointer;
+        }
+        .cartWeightSelect {
+          margin-top: 10px;
+          margin-bottom: 20px;
+        }
+        .cartWeightSelect label {
+          display: block;
+          font-size: 14px;
+          font-weight: 200;
+          margin-bottom: 8px;
+          color: #000;
+        }
+        .cartWeightSelect select {
+          width: 100%;
+          height: 45px;
+          padding: 0 12px;
+          border: 1px solid #000;
+          border-radius: 6px;
+          background: #fff;
+          font-size: 14px;
+          cursor: pointer;
+          outline: none;
+          color: #000;
+        }
+        .cartWeightSelect select:focus {
+          border-color: #222;
+        }
+        .cartPopupAddButton {
+          width: 100%;
+          height: 45px;
+          border: none;
+          border-radius: 6px;
           background: #111;
           color: #fff;
-          font-size: 18px;
-          line-height: 1;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          z-index: 10;
         }
-
+        .cartPopupAddButton:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
         .productCartPopupClose:hover {
           background: #d62828;
         }
-
         .productCartPopupImage {
           width: 34%;
           max-width: 115px;
@@ -1981,7 +1065,6 @@ function ShopContent() {
           object-fit: contain;
           margin-bottom: 8px;
         }
-
         .productCartPopupName {
           width: 100%;
           margin: 0 0 8px;
@@ -1995,7 +1078,6 @@ function ShopContent() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-
         .productCartPopupLabel {
           width: 100%;
           margin-bottom: 5px;
@@ -2004,7 +1086,6 @@ function ShopContent() {
           font-weight: 600;
           text-align: center;
         }
-
         .productWeightOptions {
           width: 100%;
           display: flex;
@@ -2013,7 +1094,6 @@ function ShopContent() {
           gap: 5px;
           margin-bottom: 8px;
         }
-
         .productWeightButton {
           flex: 1;
           min-width: 0;
@@ -2025,16 +1105,12 @@ function ShopContent() {
           font-size: 10px;
           font-weight: 600;
           cursor: pointer;
-          transition: background 0.2s ease,
-            color 0.2s ease;
+          transition: background 0.2s ease, color 0.2s ease;
         }
-
-        .productWeightButton:hover,
-        .productWeightButton.active {
+        .productWeightButton:hover, .productWeightButton.active {
           background: #111;
           color: #fff;
         }
-
         .productCartPopupPrice {
           margin-bottom: 8px;
           color: #d62828;
@@ -2042,7 +1118,6 @@ function ShopContent() {
           font-weight: 700;
           text-align: center;
         }
-
         .productQuantityRow {
           display: flex;
           align-items: center;
@@ -2051,7 +1126,6 @@ function ShopContent() {
           border: 1px solid #222;
           height: 30px;
         }
-
         .productQuantityButton {
           width: 30px;
           height: 28px;
@@ -2064,12 +1138,10 @@ function ShopContent() {
           font-size: 16px;
           cursor: pointer;
         }
-
         .productQuantityButton:hover {
           background: #111;
           color: #fff;
         }
-
         .productQuantityValue {
           min-width: 30px;
           text-align: center;
@@ -2077,7 +1149,6 @@ function ShopContent() {
           font-size: 12px;
           font-weight: 700;
         }
-
         .productAddCartButton {
           margin-top: 10px;
           width: 100%;
@@ -2090,23 +1161,18 @@ function ShopContent() {
           cursor: pointer;
           transition: background 0.2s ease;
         }
-
         .productAddCartButton:hover {
           background: #d62828;
         }
-
         .mobileShowSidebar {
           display: none;
         }
-
         .mobileSidebarClose {
           display: none;
         }
-
         .mobileSidebarOverlay {
           display: none;
         }
-
         .quickViewOverlay {
           position: fixed;
           inset: 0;
@@ -2115,14 +1181,8 @@ function ShopContent() {
           align-items: center;
           justify-content: center;
           padding: 20px;
-          background: rgba(
-            0,
-            0,
-            0,
-            0.65
-          );
+          background: rgba(0, 0, 0, 0.65);
         }
-
         .quickViewModal {
           position: relative;
           width: 100%;
@@ -2130,18 +1190,12 @@ function ShopContent() {
           max-height: 90vh;
           overflow-y: auto;
           display: grid;
-          grid-template-columns: minmax(
-              0,
-              1fr
-            )
-            minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr)minmax(0, 1fr);
           gap: 35px;
           padding: 35px;
           background: #fff;
-          box-shadow: 0 10px 40px
-            rgba(0, 0, 0, 0.3);
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
-
         .quickViewClose {
           position: absolute;
           top: 12px;
@@ -2159,77 +1213,64 @@ function ShopContent() {
           cursor: pointer;
           z-index: 5;
         }
-
         .quickViewClose:hover {
           background: #000;
           color: #fff;
         }
-
         .quickViewImageBox {
           width: 100%;
           aspect-ratio: 1 / 1;
           overflow: hidden;
           background: #f7f7f7;
-          border: 1px solid
-            rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.08);
         }
-
         .quickViewImage {
           width: 100%;
           height: 100%;
           display: block;
           object-fit: contain;
         }
-
         .quickViewInfo {
           padding-top: 15px;
         }
-
         .quickViewTitle {
           margin: 0 0 15px;
           color: #111;
           font-size: 25px;
           line-height: 1.3;
         }
-
         .quickViewCategory {
           margin-bottom: 15px;
           color: #777;
           font-size: 13px;
         }
-
         .quickViewPrice {
           display: flex;
           align-items: center;
           gap: 10px;
           margin-bottom: 20px;
         }
-
         .quickViewOriginalPrice {
           color: #888;
           font-size: 15px;
           text-decoration: line-through;
         }
-
         .quickViewOfferPrice {
           color: #d62828;
           font-size: 22px;
           font-weight: 700;
         }
-
         .quickViewDescription {
           margin-bottom: 25px;
           color: #555;
           font-size: 14px;
           line-height: 1.7;
         }
-
         .quickViewButtons {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
         }
-
         .quickViewButton {
           min-height: 42px;
           padding: 0 20px;
@@ -2240,12 +1281,10 @@ function ShopContent() {
           font-weight: 600;
           cursor: pointer;
         }
-
         .quickViewButton:hover {
           background: #fff;
           color: #111;
         }
-
         .quickViewSecondaryButton {
           min-height: 42px;
           padding: 0 20px;
@@ -2256,644 +1295,1215 @@ function ShopContent() {
           font-weight: 600;
           cursor: pointer;
         }
-
         .quickViewSecondaryButton:hover {
           background: #111;
           color: #fff;
         }
+        /* ============================================================
+   MOBILE RESPONSIVE ONLY — FULL CODE
+   ============================================================ */
 
-        @media (max-width: 700px) {
-          .shopHero {
-            height: 250px;
-          }
+@media (max-width: 700px) {
 
-          .shopHeroImage {
-            position: relative;
-            width: 100%;
-            height: 300px;
-          }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-          .shopHeroOverlay h1 {
-            margin-top: 80px;
-            font-size: 36px;
-          }
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 
-          .shopBody {
-            padding: 30px 15px 50px;
-          }
+  /* ==========================================================
+     HERO
+     ========================================================== */
 
-          .shopLayout {
-            display: block;
-          }
+  .shopHero {
+    width: 100%;
+    height: 250px;
+    position: relative;
+    overflow: hidden;
+  }
 
-          .shopTopBar {
-            margin-bottom: 25px;
-          }
+  .shopHeroImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
 
-          .shopTopRow {
-            justify-content: flex-start;
-            gap: 12px;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-            scrollbar-width: none;
-          }
+  .shopHeroOverlay {
+    position: absolute;
+    inset: 0;
 
-          .shopTopRow::-webkit-scrollbar {
-            display: none;
-          }
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-          .breadcrumb {
-            flex: 0 0 auto;
-            gap: 5px;
-            font-size: 12px;
-          }
+    padding: 15px;
+  }
 
-          .shopControls {
-            flex: 0 0 auto;
-            margin-left: 0;
-            gap: 10px;
-          }
+  .shopHeroOverlay h1 {
+    margin: 0;
 
-          .showControls {
-            flex: 0 0 auto;
-            gap: 4px;
-            font-size: 12px;
-            margin-left: 0;
-          }
+    color: #fff;
 
-          .sortSelect {
-            flex: 0 0 auto;
-            width: 180px;
-            min-width: 180px;
-            height: 34px;
-            padding: 0 8px;
-            font-size: 12px;
-          }
+    font-size: clamp(28px, 8vw, 40px);
+    font-weight: 700;
 
-          .mobileShowSidebar {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 12px;
-            height: 36px;
-            padding: 0 12px;
-            border: 1px solid #222;
-            background: #fff;
-            color: #000;
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-          }
+    line-height: 1.1;
 
-          .shopSidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 320px;
-            max-width: 88vw;
-            height: 100vh;
-            overflow-y: auto;
-            z-index: 9999;
-            padding: 58px 22px 35px;
-            background: linear-gradient(
-              135deg,
-              #fff0dc 0%,
-              #ffe3c2 30%,
-              #ffd0b0 55%,
-              #f8b0a0 75%,
-              #f28f82 100%
-            );
-            transform: translateX(-105%);
-            transition: transform 0.3s ease;
-            box-shadow: 5px 0 20px
-              rgba(0, 0, 0, 0.2);
-          }
+    text-align: center;
 
-          .shopSidebar.mobileSidebarOpen {
-            transform: translateX(0);
-          }
+    text-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+  }
 
-          .mobileSidebarClose {
-            display: flex;
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 32px;
-            height: 32px;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #222;
-            background: #fff;
-            color: #000;
-            font-size: 24px;
-            line-height: 1;
-            cursor: pointer;
-          }
+  /* ==========================================================
+     BODY
+     ========================================================== */
 
-          .mobileSidebarOverlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            z-index: 9998;
-            background: rgba(
-              0,
-              0,
-              0,
-              0.35
-            );
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-          }
+  .shopBody {
+    width: 100%;
+    min-height: 100vh;
 
-          .mobileSidebarOverlay.active {
-            opacity: 1;
-            pointer-events: auto;
-          }
+    padding: 25px 12px 50px;
 
-          .sidebarProductImageBox {
-            width: 95px;
-            height: 75px;
-            flex-basis: 95px;
-          }
+    overflow-x: hidden;
+  }
 
-          .sidebarProductName {
-            font-size: 13px;
-          }
+  .shopLayout {
+    width: 100%;
+    max-width: 100%;
 
-          .sidebarProductPrice {
-            gap: 5px;
-          }
+    margin: 0;
 
-          .sidebarOriginalPrice {
-            font-size: 11px;
-          }
+    display: block;
+  }
 
-          .sidebarOfferPrice {
-            font-size: 13px;
-          }
+  .shopMain {
+    width: 100%;
+    min-width: 0;
+  }
 
-          .productsGrid {
-            grid-template-columns: repeat(
-              2,
-              minmax(0, 1fr)
-            );
-            gap: 22px 12px;
-          }
+  /* ==========================================================
+     TOP ROW
+     ========================================================== */
 
-          .productCardName {
-            font-size: 13px;
-          }
+  .shopTopRow {
+    width: 100%;
 
-          .productPrice {
-            gap: 6px;
-          }
+    display: flex;
+    align-items: center;
 
-          .originalPrice {
-            font-size: 11px;
-          }
+    gap: 10px;
 
-          .offerPrice {
-            font-size: 14px;
-          }
+    overflow-x: auto;
+    overflow-y: hidden;
 
-          .productHoverActions {
-            top: 8px;
-            right: 8px;
-            gap: 6px;
-          }
+    padding-bottom: 3px;
 
-          .productHoverAction {
-            width: 32px;
-            height: 32px;
-          }
+    scrollbar-width: none;
+  }
 
-          .productHoverAction i {
-            font-size: 13px;
-          }
+  .shopTopRow::-webkit-scrollbar {
+    display: none;
+  }
 
-          .productOptionsButton {
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
-            height: 38px;
-            font-size: 11px;
-          }
+  .breadcrumb {
+    flex: 0 0 auto;
 
-          .productCartPopup {
-            padding: 8px;
-          }
+    display: flex;
+    align-items: center;
 
-          .productCartPopupInner {
-            padding: 14px 10px 10px;
-          }
+    gap: 5px;
 
-          .productCartPopupImage {
-            width: 27%;
-            max-width: 75px;
-            margin-bottom: 5px;
-          }
+    font-size: 11px;
 
-          .productCartPopupName {
-            font-size: 11px;
-            margin-bottom: 5px;
-          }
+    white-space: nowrap;
+  }
 
-          .productCartPopupLabel {
-            font-size: 9px;
-            margin-bottom: 3px;
-          }
+  .shopControls {
+    flex: 0 0 auto;
 
-          .productWeightOptions {
-            gap: 3px;
-            margin-bottom: 5px;
-          }
+    display: flex;
+    align-items: center;
 
-          .productWeightButton {
-            height: 25px;
-            font-size: 8px;
-          }
+    gap: 8px;
 
-          .productCartPopupPrice {
-            margin-bottom: 5px;
-            font-size: 14px;
-          }
+    margin-left: auto;
+  }
 
-          .productQuantityRow {
-            height: 26px;
-            margin-bottom: 5px;
-          }
+  .showControls {
+    flex: 0 0 auto;
 
-          .productQuantityButton {
-            width: 27px;
-            height: 24px;
-            font-size: 14px;
-          }
+    display: flex;
+    align-items: center;
 
-          .productQuantityValue {
-            min-width: 25px;
-            font-size: 10px;
-          }
+    gap: 4px;
 
-          .productAddCartButton {
-            height: 29px;
-            font-size: 9px;
-          }
+    font-size: 11px;
 
-          .productCartPopupClose {
-            width: 23px;
-            height: 23px;
-            top: 4px;
-            right: 4px;
-            font-size: 15px;
-          }
+    white-space: nowrap;
+  }
 
-          .quickViewOverlay {
-            padding: 12px;
-          }
+  .sortSelect {
+    width: 150px;
+    min-width: 150px;
+    height: 34px;
 
-          .quickViewModal {
-            max-height: 94vh;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            padding: 20px;
-          }
+    padding: 0 8px;
 
-          .quickViewInfo {
-            padding-top: 0;
-          }
+    border: 1px solid #222;
 
-          .quickViewTitle {
-            font-size: 20px;
-          }
+    background: #fff;
+    color: #222;
 
-          .quickViewOfferPrice {
-            font-size: 19px;
-          }
+    font-size: 11px;
+  }
 
-          .quickViewDescription {
-            font-size: 13px;
-          }
-        }
+  /* ==========================================================
+     MOBILE SIDEBAR
+     ========================================================== */
 
-        @media (max-width: 380px) {
-          .shopBody {
-            padding-left: 12px;
-            padding-right: 12px;
-          }
+  .shopSidebar {
+    position: fixed;
 
-          .shopTopRow {
-            gap: 9px;
-          }
+    top: 0;
+    left: 0;
 
-          .breadcrumb {
-            font-size: 11px;
-          }
+    width: min(320px, 88vw);
+    height: 100dvh;
 
-          .shopControls {
-            gap: 7px;
-          }
+    z-index: 99999;
 
-          .showControls {
-            font-size: 11px;
-            gap: 3px;
-          }
+    overflow-x: hidden;
+    overflow-y: auto;
 
-          .sortSelect {
-            width: 165px;
-            min-width: 165px;
-          }
+    padding: 60px 18px 35px;
 
-          .productsGrid {
-            gap: 18px 9px;
-          }
+    background:
+      linear-gradient(
+        135deg,
+        #fff0dc 0%,
+        #ffe3c2 30%,
+        #ffd0b0 55%,
+        #f8b0a0 75%,
+        #f28f82 100%
+      );
 
-          .productCardName {
-            font-size: 12px;
-          }
+    transform: translateX(-110%);
 
-          .productHoverActions {
-            top: 6px;
-            right: 6px;
-          }
+    transition: transform .3s ease;
 
-          .productHoverAction {
-            width: 29px;
-            height: 29px;
-          }
+    box-shadow: 5px 0 25px rgba(0,0,0,.25);
+  }
 
-          .productOptionsButton {
-            left: 6px;
-            right: 6px;
-            bottom: 6px;
-            height: 35px;
-          }
-        }
+  .shopSidebar.mobileSidebarOpen {
+    transform: translateX(0);
+  }
+
+  .mobileSidebarClose {
+    position: absolute;
+
+    top: 14px;
+    right: 14px;
+
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #222;
+    border-radius: 50%;
+
+    background: #fff;
+    color: #000;
+
+    font-size: 21px;
+
+    cursor: pointer;
+  }
+
+  .mobileSidebarOverlay {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 99998;
+
+    background: rgba(0,0,0,.45);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+      opacity .3s ease,
+      visibility .3s ease;
+  }
+
+  .mobileSidebarOverlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobileShowSidebar {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+
+    margin-top: 10px;
+
+    height: 36px;
+
+    padding: 0 13px;
+
+    border: 1px solid #222;
+
+    background: #fff;
+    color: #000;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+  }
+
+  /* ==========================================================
+     PRODUCTS
+     ========================================================== */
+
+  .productsGrid {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 24px 10px;
+  }
+
+  .productCard {
+    width: 100%;
+    min-width: 0;
+
+    cursor: pointer;
+  }
+
+  .productImageBox {
+    position: relative;
+
+    width: 100%;
+
+    aspect-ratio: 1 / 1;
+
+    overflow: hidden;
+
+    background: #fff;
+
+    border: 1px solid rgba(0,0,0,.08);
+  }
+
+  .productImage {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: contain;
+
+    transition:
+      filter .25s ease,
+      transform .25s ease;
+  }
+
+  .productImageSecond {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+
+    opacity: 0;
+
+    transition:
+      filter .25s ease,
+      transform .25s ease;
+  }
+
+  .productCard:hover .productImage {
+    transform: none;
+  }
+
+  .productCard:hover .productImageSecond {
+    opacity: 0;
+  }
+
+  /* ==========================================================
+     PRODUCT ACTIONS
+     ========================================================== */
+
+  .productHoverActions {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    opacity: 1;
+    visibility: visible;
+
+    transform: none;
+
+    pointer-events: none;
+
+    z-index: 100;
+  }
+
+  .productHoverAction {
+    position: absolute;
+
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
+
+    cursor: pointer;
+
+    pointer-events: auto;
+
+    z-index: 101;
+
+    transition:
+      transform .2s ease,
+      background .2s ease;
+  }
+
+  .productHoverAction i {
+    font-size: 15px;
+  }
+
+  /* ==========================================================
+     WISHLIST — TOP RIGHT
+     ========================================================== */
+
+  .productHoverAction:first-child {
+    top: 10px;
+    right: 10px;
+
+    left: auto;
+    bottom: auto;
+
+    width: 36px;
+    height: 36px;
+
+    background: #fff !important;
+
+    color: #111 !important;
+
+    border-radius: 50%;
+
+    box-shadow:
+      0 2px 8px rgba(0,0,0,.18);
+
+    display: flex !important;
+  }
+
+  .productHoverAction:first-child:hover,
+  .productHoverAction:first-child.active {
+    background: #fff !important;
+    color: #111 !important;
+
+    transform: none;
+  }
+
+  /* ==========================================================
+     COMPARE — HIDDEN
+     ========================================================== */
+
+  .productHoverAction:nth-child(2) {
+    display: none !important;
+  }
+
+  /* ==========================================================
+     CART — BOTTOM LEFT
+     ========================================================== */
+
+  .productHoverAction:last-child {
+    left: 10px;
+    bottom: 10px;
+
+    top: auto;
+    right: auto;
+
+    width: 36px;
+    height: 36px;
+
+    background: transparent !important;
+
+    color: #111 !important;
+
+    border: none;
+
+    box-shadow: none;
+
+    display: flex !important;
+  }
+
+  .productHoverAction:last-child:hover,
+  .productHoverAction:last-child.active {
+    background: transparent !important;
+
+    color: #111 !important;
+
+    transform: none;
+  }
+
+  /* ==========================================================
+     SELECT OPTIONS — HIDDEN
+     ========================================================== */
+
+  .productOptionsButton {
+    display: none !important;
+  }
+
+  /* ==========================================================
+     PRODUCT NAME
+     ========================================================== */
+
+  .productCardName {
+    width: 100%;
+
+    margin: 9px 0 0;
+
+    color: #000;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    line-height: 1.35;
+
+    text-align: center;
+
+    display: -webkit-box;
+
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+  }
+
+  .productPrice {
+    width: 100%;
+
+    margin-top: 5px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    flex-wrap: wrap;
+
+    font-size: 12px;
+  }
+
+  .originalPrice {
+    font-size: 10px;
+  }
+
+  .offerPrice {
+    font-size: 13px;
+  }
+
+  /* ==========================================================
+     CART POPUP
+     
+     EXACT SAME WIDTH + HEIGHT AS PRODUCT IMAGE
+     NOT FULL SCREEN
+     ========================================================== */
+
+  .productCartPopup {
+    position: absolute !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    min-height: 100% !important;
+    max-height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: transparent !important;
+
+    z-index: 100000;
+
+    overflow: hidden;
+
+    animation: cartPopupImageShow .2s ease;
+  }
+
+  /* ==========================================================
+     BLUR PRODUCT IMAGE
+     ========================================================== */
+
+  .productImageBox.cartPopupActive .productImage {
+    filter: blur(6px);
+
+    transform: scale(1.06);
+  }
+
+  .productImageBox.cartPopupActive .productImageSecond {
+    filter: blur(6px);
+
+    transform: scale(1.06);
+  }
+
+  /* ==========================================================
+     POPUP OVERLAY
+     EXACT IMAGE SIZE
+     ========================================================== */
+
+  .productCartPopupOverlay {
+    position: absolute !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: rgba(255,255,255,.30);
+
+    z-index: 1;
+  }
+
+  /* ==========================================================
+     POPUP INNER CONTENT
+     ========================================================== */
+
+  .productCartPopupInner {
+    position: relative;
+
+    z-index: 2;
+
+    width: 86%;
+
+    max-width: none;
+
+    padding: 25px 17px 17px;
+
+    background: rgba(255,255,255,.97);
+
+    border-radius: 12px;
+
+    box-shadow:
+      0 8px 25px rgba(0,0,0,.24);
+
+    animation: cartPopupShow .22s ease-out;
+  }
+
+  /* ==========================================================
+     CLOSE BUTTON
+     ========================================================== */
+
+  .productCartPopupClose {
+    position: absolute;
+
+    top: 7px;
+    right: 8px;
+
+    width: 28px;
+    height: 28px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+
+    color: #111;
+
+    font-size: 22px;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+    z-index: 5;
+  }
+
+  /* ==========================================================
+     WEIGHT SELECT
+     ========================================================== */
+
+  .cartWeightSelect {
+    width: 100%;
+
+    margin: 5px 0 14px;
+  }
+
+  .cartWeightSelect label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #111;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: left;
+  }
+
+  .cartWeightSelect select {
+    width: 100%;
+
+    height: 42px;
+
+    padding: 0 10px;
+
+    border: 1px solid #ccc;
+
+    border-radius: 6px;
+
+    background: #fff;
+
+    color: #111;
+
+    font-size: 12px;
+
+    outline: none;
+
+    cursor: pointer;
+  }
+
+  .cartWeightSelect select:focus {
+    border-color: #111;
+  }
+
+  /* ==========================================================
+     ADD TO CART
+     ========================================================== */
+
+  .cartPopupAddButton {
+    width: 100%;
+
+    height: 43px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+
+    border-radius: 6px;
+
+    background: #111;
+
+    color: #fff;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: .3px;
+
+    cursor: pointer;
+  }
+
+  .cartPopupAddButton:disabled {
+    opacity: .5;
+
+    cursor: not-allowed;
+  }
+
+  /* ==========================================================
+     ANIMATIONS
+     ========================================================== */
+
+  @keyframes cartPopupImageShow {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cartPopupShow {
+    from {
+      opacity: 0;
+      transform: scale(.90);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+
+/* ============================================================
+   MOBILE — 380px AND BELOW
+   ============================================================ */
+
+@media (max-width: 380px) {
+
+  .shopBody {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+
+  .shopHero {
+    height: 230px;
+  }
+
+  .productsGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 20px 8px;
+  }
+
+  .productHoverAction:first-child {
+    top: 7px;
+    right: 7px;
+
+    width: 32px;
+    height: 32px;
+  }
+
+  .productHoverAction:last-child {
+    left: 7px;
+    bottom: 7px;
+
+    width: 32px;
+    height: 32px;
+  }
+
+  .productHoverAction i {
+    font-size: 13px;
+  }
+
+  .productCardName {
+    font-size: 11px;
+  }
+
+  .originalPrice {
+    font-size: 9px;
+  }
+
+  .offerPrice {
+    font-size: 12px;
+  }
+
+  .productCartPopup {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    min-height: 100% !important;
+    max-height: 100% !important;
+
+    padding: 0 !important;
+  }
+
+  .productCartPopupInner {
+    width: 88%;
+
+    max-width: none;
+
+    padding: 23px 14px 15px;
+  }
+
+  .productCartPopupClose {
+    width: 26px;
+    height: 26px;
+
+    top: 6px;
+    right: 7px;
+
+    font-size: 20px;
+  }
+
+  .cartWeightSelect label {
+    font-size: 11px;
+  }
+
+  .cartWeightSelect select {
+    height: 39px;
+
+    font-size: 11px;
+  }
+
+  .cartPopupAddButton {
+    height: 40px;
+
+    font-size: 10px;
+  }
+}
+
+
+/* ============================================================
+   MOBILE — 340px AND BELOW
+   ============================================================ */
+
+@media (max-width: 340px) {
+
+  .shopBody {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .shopHero {
+    height: 215px;
+  }
+
+  .productsGrid {
+    gap: 18px 7px;
+  }
+
+  .productHoverAction:first-child {
+    top: 6px;
+    right: 6px;
+
+    width: 29px;
+    height: 29px;
+  }
+
+  .productHoverAction:last-child {
+    left: 6px;
+    bottom: 6px;
+
+    width: 29px;
+    height: 29px;
+  }
+
+  .productHoverAction i {
+    font-size: 11px;
+  }
+
+  .productCardName {
+    font-size: 10px;
+  }
+
+  .productPrice {
+    font-size: 10px;
+  }
+
+  .offerPrice {
+    font-size: 11px;
+  }
+
+  .originalPrice {
+    font-size: 8px;
+  }
+
+  .productCartPopup {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    min-height: 100% !important;
+    max-height: 100% !important;
+
+    padding: 0 !important;
+  }
+
+  .productCartPopupInner {
+    width: 90%;
+
+    max-width: none;
+
+    padding: 21px 12px 13px;
+  }
+
+  .productCartPopupClose {
+    width: 24px;
+    height: 24px;
+
+    top: 5px;
+    right: 6px;
+
+    font-size: 19px;
+  }
+
+  .cartWeightSelect {
+    margin-bottom: 11px;
+  }
+
+  .cartWeightSelect label {
+    margin-bottom: 5px;
+
+    font-size: 10px;
+  }
+
+  .cartWeightSelect select {
+    height: 37px;
+
+    font-size: 10px;
+  }
+
+  .cartPopupAddButton {
+    height: 38px;
+
+    font-size: 10px;
+  }
+}
+
+
+/* ============================================================
+   MOBILE — 300px AND BELOW
+   ============================================================ */
+
+@media (max-width: 300px) {
+
+  .shopBody {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+
+  .shopHero {
+    height: 200px;
+  }
+
+  .productsGrid {
+    gap: 15px 5px;
+  }
+
+  .productHoverAction:first-child {
+    top: 5px;
+    right: 5px;
+
+    width: 27px;
+    height: 27px;
+  }
+
+  .productHoverAction:last-child {
+    left: 5px;
+    bottom: 5px;
+
+    width: 27px;
+    height: 27px;
+  }
+
+  .productHoverAction i {
+    font-size: 10px;
+  }
+
+  .productCardName {
+    margin-top: 7px;
+
+    font-size: 9px;
+  }
+
+  .productPrice {
+    margin-top: 4px;
+
+    gap: 3px;
+
+    font-size: 9px;
+  }
+
+  .offerPrice {
+    font-size: 10px;
+  }
+
+  .originalPrice {
+    font-size: 7px;
+  }
+
+  .productCartPopup {
+    width: 100% !important;
+    height: 100% !important;
+
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    min-height: 100% !important;
+    max-height: 100% !important;
+
+    padding: 0 !important;
+  }
+
+  .productCartPopupInner {
+    width: 92%;
+
+    max-width: none;
+
+    padding: 19px 9px 10px;
+
+    border-radius: 9px;
+  }
+
+  .productCartPopupClose {
+    top: 4px;
+    right: 5px;
+
+    width: 22px;
+    height: 22px;
+
+    font-size: 18px;
+  }
+
+  .cartWeightSelect {
+    margin-top: 3px;
+    margin-bottom: 9px;
+  }
+
+  .cartWeightSelect label {
+    margin-bottom: 4px;
+
+    font-size: 9px;
+  }
+
+  .cartWeightSelect select {
+    height: 34px;
+
+    padding: 0 7px;
+
+    font-size: 9px;
+  }
+
+  .cartPopupAddButton {
+    height: 35px;
+
+    font-size: 8px;
+  }
+}
       `}</style>
-
-      {/* =====================================================
-          HERO
-      ===================================================== */}
-
       <section className="shopHero">
-        <img
-          src="/uploads/shop.png"
-          alt="Shop"
-          className="shopHeroImage"
-          onError={(event) => {
-            event.currentTarget.style.display =
-              "none";
-          }}
-        />
-
+        <img src="/uploads/shop.png" alt="Shop" className="shopHeroImage" onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}/>
         <div className="shopHeroOverlay">
           <h1>{selectedCategory}</h1>
         </div>
       </section>
-
-      {/* =====================================================
-          SHOP BODY
-      ===================================================== */}
-
       <section className="shopBody">
         <div className="shopLayout">
-
-          {/* =================================================
-              SIDEBAR
-          ================================================= */}
-
-          <aside
-            className={`shopSidebar ${
-              sidebarOpen
-                ? "mobileSidebarOpen"
-                : ""
-            }`}
-          >
-            <button
-              type="button"
-              className="mobileSidebarClose"
-              onClick={() =>
-                setSidebarOpen(false)
-              }
-            >
-              ×
-            </button>
-
-            {/* PRICE */}
-
+          <aside className={`shopSidebar ${sidebarOpen ? "mobileSidebarOpen" : "" }`}>
+            <button type="button" className="mobileSidebarClose" onClick={() => setSidebarOpen(false)}>×</button>
             <div className="sidebarSection">
               <h3 className="sidebarTitle">
                 Filter by price
               </h3>
-
               <div className="rangeSlider">
                 <div className="rangeTrack" />
-
-                <div
-                  className="rangeDot"
-                  style={{
-                    left: `${Math.min(
-                      100,
-                      Math.max(
-                        0,
-                        (Number(
-                          minPrice
-                        ) /
-                          2000) *
-                          100
-                      )
-                    )}%`,
-                  }}
-                />
-
-                <div
-                  className="rangeDot"
-                  style={{
-                    left: `${Math.min(
-                      100,
-                      Math.max(
-                        0,
-                        (Number(
-                          maxPrice
-                        ) /
-                          2000) *
-                          100
-                      )
-                    )}%`,
-                  }}
-                />
+                <div className="rangeDot" style={{left: `${Math.min(100, Math.max(0, (Number(minPrice) / 2000) * 100))}%`,}} />
+                <div className="rangeDot" style={{left: `${Math.min(100, Math.max(0, (Number(maxPrice) / 2000) * 100))}%`,}}/>
               </div>
-
               <div className="priceBottom">
                 <span className="priceText">
-                  Price: ₹
-                  {Number(
-                    minPrice || 0
-                  ).toLocaleString(
-                    "en-IN"
-                  )}
-                  {" — "}
-                  ₹
-                  {Number(
-                    maxPrice || 0
-                  ).toLocaleString(
-                    "en-IN"
-                  )}
+                  Price: ₹{Number(minPrice || 0).toLocaleString("en-IN")}{" — "}
+                  ₹{Number(maxPrice || 0).toLocaleString("en-IN")}
                 </span>
-
-                <button
-                  type="button"
-                  className="filterButton"
-                  onClick={
-                    handlePriceFilter
-                  }
-                >
-                  Filter
-                </button>
+                <button type="button" className="filterButton" onClick={handlePriceFilter}>Filter</button>
               </div>
             </div>
-
-            {/* STOCK */}
-
             <div className="sidebarSection">
               <h3 className="sidebarTitle">
                 Stock status
               </h3>
-
-              <div
-                className="stockOption"
-                onClick={() =>
-                  handleStockChange(
-                    "onsale"
-                  )
-                }
-              >
-                <span
-                  className={`customCheckbox ${
-                    selectedStock ===
-                    "onsale"
-                      ? "checked"
-                      : ""
-                  }`}
-                >
-                  {selectedStock ===
-                    "onsale" && (
-                    <i className="fa fa-check" />
-                  )}
+              <div className="stockOption" onClick={() => handleStockChange("onsale")}>
+                <span className={`customCheckbox ${selectedStock === "onsale" ? "checked" : "" }`}>
+                  {selectedStock === "onsale" && (<i className="fa fa-check" />)}
                 </span>
-
                 <span>On sale</span>
               </div>
-
-              <div
-                className="stockOption"
-                onClick={() =>
-                  handleStockChange(
-                    "instock"
-                  )
-                }
-              >
-                <span
-                  className={`customCheckbox ${
-                    selectedStock ===
-                    "instock"
-                      ? "checked"
-                      : ""
-                  }`}
-                >
-                  {selectedStock ===
-                    "instock" && (
-                    <i className="fa fa-check" />
-                  )}
+              <div className="stockOption" onClick={() => handleStockChange("instock")}>
+                <span className={`customCheckbox ${selectedStock === "instock" ? "checked" : "" }`}>
+                  {selectedStock === "instock" && (<i className="fa fa-check" />)}
                 </span>
-
                 <span>In stock</span>
               </div>
             </div>
-
-            {/* CATEGORIES */}
-
             <div className="sidebarSection">
               <h3 className="sidebarTitle">
                 Product categories
               </h3>
-
               {categories.map(
                 (category) => {
-                  const hasChildren =
-                    Array.isArray(
-                      category.children
-                    );
-
-                  const isOpen =
-                    openCategories[
-                      category.name
-                    ];
-
+                  const hasChildren = Array.isArray(category.children);
+                  const isOpen = openCategories[category.name];
                   return (
-                    <div
-                      className="categoryItem"
-                      key={
-                        category.name
-                      }
-                    >
+                    <div className="categoryItem" key={category.name}>
                       {hasChildren ? (
                         <>
                           <div className="categoryRowWithArrow">
-                            <span
-                              className="categoryRow"
-                              onClick={() =>
-                                handleCategoryClick(
-                                  category.name
-                                )
-                              }
-                            >
+                            <span className="categoryRow" onClick={() => handleCategoryClick(category.name)}>
                               {
                                 category.name
                               }
                             </span>
-
-                            <span
-                              className="categoryArrow"
-                              onClick={() =>
-                                toggleCategory(
-                                  category.name
-                                )
-                              }
-                            >
-                              <i
-                                className={`fa ${
-                                  isOpen
-                                    ? "fa-chevron-up"
-                                    : "fa-chevron-down"
-                                }`}
-                              />
+                            <span className="categoryArrow" onClick={() => toggleCategory(category.name)}>
+                              <i className={`fa ${isOpen ? "fa-chevron-up" : "fa-chevron-down" }`} />
                             </span>
                           </div>
-
                           {isOpen && (
                             <div className="categoryChildren">
                               {category.children.map(
-                                (
-                                  child
-                                ) => (
-                                  <div
-                                    key={
-                                      child
-                                    }
-                                    className="childCategory"
-                                    onClick={() =>
-                                      handleCategoryClick(
-                                        child
-                                      )
-                                    }
-                                  >
-                                    {
-                                      child
-                                    }
+                                (child) => (
+                                  <div key={child} className="childCategory" onClick={() => handleCategoryClick(child)}>
+                                    {child}
                                   </div>
                                 )
                               )}
@@ -2901,17 +2511,8 @@ function ShopContent() {
                           )}
                         </>
                       ) : (
-                        <div
-                          className="categoryRow"
-                          onClick={() =>
-                            handleCategoryClick(
-                              category.name
-                            )
-                          }
-                        >
-                          {
-                            category.name
-                          }
+                        <div className="categoryRow" onClick={() => handleCategoryClick(category.name)}>
+                          {category.name}
                         </div>
                       )}
                     </div>
@@ -2919,119 +2520,44 @@ function ShopContent() {
                 }
               )}
             </div>
-
-            {/* SIDEBAR PRODUCTS */}
-
             <div className="sidebarSection">
               <h3 className="sidebarTitle">
                 Products
               </h3>
-
               <div className="sidebarProducts">
                 {loading ? (
-                  <p
-                    style={{
-                      color: "#000",
-                      fontSize:
-                        "13px",
-                    }}
-                  >
-                    Loading...
-                  </p>
-                ) : randomProducts.length ===
-                  0 ? (
-                  <p
-                    style={{
-                      color: "#000",
-                      fontSize:
-                        "13px",
-                    }}
-                  >
+                  <p style={{color: "#000", fontSize:"13px",}}>Loading...</p>
+                ) : randomProducts.length === 0 ? (
+                  <p style={{color: "#000", fontSize:"13px",}}>
                     No products found.
                   </p>
                 ) : (
                   randomProducts.map(
-                    (
-                      product,
-                      index
-                    ) => {
-                      const originalPrice =
-                        getOriginalPrice(
-                          product
-                        );
-
-                      const offerPrice =
-                        getOfferPrice(
-                          product
-                        );
-
+                    (product, index) => {
+                      const originalPrice = getOriginalPrice(product);
+                      const offerPrice = getOfferPrice(product);
                       return (
-                        <div
-                          className="sidebarProduct"
-                          key={
-                            getProductId(
-                              product
-                            ) ||
-                            index
-                          }
-                          onClick={() =>
-                            handleProductClick(
-                              product
-                            )
-                          }
-                        >
+                        <div className="sidebarProduct" key={getProductId(product) || index} onClick={() => handleProductClick(product)}>
                           <div className="sidebarProductImageBox">
-                            <img
-                              src={getProductImage(
-                                product
-                              )}
-                              alt={getProductName(
-                                product
-                              )}
-                              className="sidebarProductImage"
-                              onError={(
-                                event
-                              ) => {
-                                event.currentTarget.src =
-                                  "/uploads/no-image.png";
-                              }}
-                            />
+                            <img src={getProductImage(product)} alt={getProductName(product)} className="sidebarProductImage" onError={(event) => {event.currentTarget.src = "/uploads/no-image.png";}}/>
                           </div>
-
                           <div className="sidebarProductInfo">
                             <p className="sidebarProductName">
-                              {getProductName(
-                                product
-                              )}
+                              {getProductName(product)}
                             </p>
-
-                            {hasOffer(
-                              product
-                            ) ? (
+                            {hasOffer(product) ? (
                               <div className="sidebarProductPrice">
                                 <span className="sidebarOriginalPrice">
-                                  ₹
-                                  {originalPrice.toLocaleString(
-                                    "en-IN"
-                                  )}
+                                  ₹{originalPrice.toLocaleString("en-IN")}
                                 </span>
-
                                 <span className="sidebarOfferPrice">
-                                  ₹
-                                  {offerPrice.toLocaleString(
-                                    "en-IN"
-                                  )}
+                                  ₹{offerPrice.toLocaleString("en-IN")}
                                 </span>
                               </div>
                             ) : (
                               <div className="sidebarProductPrice">
                                 <span className="sidebarOfferPrice">
-                                  ₹
-                                  {getDisplayPrice(
-                                    product
-                                  ).toLocaleString(
-                                    "en-IN"
-                                  )}
+                                  ₹{getDisplayPrice(product).toLocaleString("en-IN")}
                                 </span>
                               </div>
                             )}
@@ -3039,576 +2565,145 @@ function ShopContent() {
                         </div>
                       );
                     }
-                  )
+                  ) 
                 )}
               </div>
             </div>
           </aside>
-
-          {/* =================================================
-              RIGHT SIDE
-          ================================================= */}
-
-          <main className="shopMain">
-
-            {/* TOP BAR */}
-
+           <main className="shopMain">
             <div className="shopTopBar">
               <div className="shopTopRow">
-
                 <div className="breadcrumb">
-                  <span
-                    className="breadcrumbHome"
-                    onClick={() =>
-                      handleCategoryClick(
-                        "Shop"
-                      )
-                    }
-                  >
-                    Home
-                  </span>
-
-                  <span className="breadcrumbArrow">
-                    »
-                  </span>
-
-                  <span>
-                    {selectedCategory}
-                  </span>
+                  <span className="breadcrumbHome" onClick={() => handleCategoryClick("Shop")}>Home</span>
+                  <span className="breadcrumbArrow">»</span>
+                  <span>{selectedCategory}</span>
                 </div>
-
                 <div className="shopControls">
-
                   <div className="showControls">
-                    <span>
-                      Show
-                    </span>
-
-                    {[
-                      "9",
-                      "12",
-                      "18",
-                      "24",
-                    ].map(
+                    <span>Show</span>
+                    {["9", "12", "18", "24",].map(
                       (number) => (
-                        <span
-                          key={
-                            number
-                          }
-                          className={`showNumber ${
-                            showCount ===
-                            number
-                              ? "active"
-                              : ""
-                          }`}
-                          onClick={() =>
-                            handleShowChange(
-                              number
-                            )
-                          }
-                        >
-                          {
-                            number
-                          }
+                        <span key={number} className={`showNumber ${showCount === number ? "active" : ""}`} onClick={() => handleShowChange(number)}>
+                          {number}
                         </span>
                       )
                     )}
                   </div>
-
-                  <select
-                    className="sortSelect"
-                    value={
-                      sortValue
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      handleSortChange(
-                        event
-                          .target
-                          .value
-                      )
-                    }
-                  >
-                    <option value="default">
-                      Default sorting
-                    </option>
-
-                    <option value="popularity">
-                      Sort by popularity
-                    </option>
-
-                    <option value="rating">
-                      Sort by average rating
-                    </option>
-
-                    <option value="latest">
-                      Sort by latest
-                    </option>
-
-                    <option value="price-low">
-                      Sort by price: low to high
-                    </option>
-
-                    <option value="price-high">
-                      Sort by price: high to low
-                    </option>
+                  <select className="sortSelect" value={sortValue} onChange={(event) => handleSortChange(event.target.value)}>
+                    <option value="default">Default sorting</option>
+                    <option value="popularity">Sort by popularity</option>
+                    <option value="rating">Sort by average rating</option>
+                    <option value="latest">Sort by latest</option>
+                    <option value="price-low">Sort by price: low to high</option>
+                    <option value="price-high">Sort by price: high to low</option>
                   </select>
                 </div>
               </div>
-
-              <button
-                type="button"
-                className="mobileShowSidebar"
-                onClick={() =>
-                  setSidebarOpen(true)
-                }
-              >
+              <button type="button" className="mobileShowSidebar" onClick={() => setSidebarOpen(true)}>
                 <i className="fa fa-bars" />
-
-                <span>
-                  Show sidebar
-                </span>
+                <span>Show sidebar</span>
               </button>
             </div>
-
-            {/* PRODUCT GRID */}
-
             {loading ? (
               <div className="emptyProducts">
                 Loading products...
               </div>
-            ) : displayedProducts.length ===
-              0 ? (
+            ) : displayedProducts.length === 0 ? (
               <div className="emptyProducts">
                 No products found.
               </div>
             ) : (
               <div className="productsGrid">
-
                 {displayedProducts.map(
-                  (
-                    product,
-                    index
-                  ) => {
-                    const image1 =
-                      getProductImage(
-                        product
-                      );
-
-                    const image2 =
-                      getProductSecondImage(
-                        product
-                      );
-
-                    const originalPrice =
-                      getOriginalPrice(
-                        product
-                      );
-
-                    const offerPrice =
-                      getOfferPrice(
-                        product
-                      );
-
-                    const productId =
-                      getProductId(
-                        product
-                      );
-
-                    const productIdString =
-                      productId
-                        ? String(
-                            productId
-                          )
-                        : "";
-
-                    const isWishlisted =
-                      wishlistIds.includes(
-                        productIdString
-                      );
-
-                    const isCompared =
-                      compareIds.includes(
-                        productIdString
-                      );
-
-                    const isCartPopupOpen =
-                      cartPopupProduct &&
-                      String(
-                        getProductId(
-                          cartPopupProduct
-                        )
-                      ) ===
-                        String(
-                          productId
-                        );
-
+                  (product, index) => {
+                    const image1 = getProductImage(product);
+                    const image2 = getProductSecondImage(product);
+                    const originalPrice = getOriginalPrice(product);
+                    const offerPrice = getOfferPrice(product);
+                    const productId = getProductId(product);
+                    const productIdString = productId ? String(productId) : "";
+                    const isWishlisted = wishlistIds.includes(productIdString);
+                    const isCompared = compareIds.includes(productIdString);
+                    const isCartPopupOpen = cartPopupProduct && String(getProductId(cartPopupProduct)) === String(productId);
                     return (
-                      <div
-                        className="productCard"
-                        key={
-                          productId ||
-                          index
-                        }
-                        onClick={() =>
-                          handleProductClick(
-                            product
-                          )
-                        }
-                      >
-                        {/* IMAGE */}
-
+                      <div className="productCard" key={productId || index} onClick={() => handleProductClick(product)}>
                         <div className="productImageBox">
-
-                          <img
-                            src={
-                              image1
-                            }
-                            alt={getProductName(
-                              product
-                            )}
-                            className="productImage"
-                            onError={(
-                              event
-                            ) => {
-                              if (
-                                event
-                                  .currentTarget
-                                  .dataset
-                                  .fallback
-                              ) {
+                          <img src={image1} alt={getProductName(product)} className="productImage"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleProductClick(product);
+                            }} onError={(event) => {
+                              if (event.currentTarget.dataset.fallback) {
                                 return;
                               }
-
-                              event.currentTarget.dataset.fallback =
-                                "true";
-
-                              event.currentTarget.src =
-                                "/uploads/no-image.png";
+                              event.currentTarget.dataset.fallback = "true";
+                              event.currentTarget.src = "/uploads/no-image.png";
                             }}
                           />
-
                           {image2 && (
-                            <img
-                              src={
-                                image2
-                              }
-                              alt={getProductName(
-                                product
-                              )}
-                              className="productImage productImageSecond"
-                              onError={(
-                                event
-                              ) => {
-                                event.currentTarget.style.display =
-                                  "none";
+                            <img src={image2} alt={getProductName(product)} className="productImage productImageSecond"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleProductClick(product);
+                              }}
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
                               }}
                             />
                           )}
-
-                          {/* HOVER ACTIONS */}
-
                           {!isCartPopupOpen && (
                             <div className="productHoverActions">
-
-                              {/* COMPARE */}
-
-                              <button
-                                type="button"
-                                className={`productHoverAction ${
-                                  isCompared
-                                    ? "active"
-                                    : ""
-                                }`}
-                                title={
-                                  isCompared
-                                    ? "Remove from compare"
-                                    : "Add to compare"
-                                }
-                                onClick={(
-                                  event
-                                ) =>
-                                  handleCompareClick(
-                                    event,
-                                    product
-                                  )
-                                }
-                              >
-                                <i className="fa fa-exchange" />
+                              <button type="button" className={`productHoverAction ${wishlistItems.includes(getProductId(product)) ? "active" : ""}`} onClick={(event) => handleWishlist(event, product)} aria-label="Add to wishlist">
+                                <i className="fa fa-heart" />
                               </button>
-
-                              {/* QUICK VIEW */}
-
-                              <button
-                                type="button"
-                                className="productHoverAction"
-                                title="Quick view"
-                                onClick={(
-                                  event
-                                ) =>
-                                  openQuickView(
-                                    event,
-                                    product
-                                  )
-                                }
-                              >
+                              <button type="button" className="productHoverAction" title="Quick view" onClick={(event) => openQuickView(event, product)}>
                                 <i className="fa fa-eye" />
                               </button>
-
-                              {/* WISHLIST */}
-
-                              <button
-                                type="button"
-                                className={`productHoverAction ${
-                                  isWishlisted
-                                    ? "active"
-                                    : ""
-                                }`}
-                                title={
-                                  isWishlisted
-                                    ? "Remove from wishlist"
-                                    : "Add to wishlist"
-                                }
-                                onClick={(
-                                  event
-                                ) =>
-                                  handleWishlistClick(
-                                    event,
-                                    product
-                                  )
-                                }
-                              >
-                                <i
-                                  className={`fa ${
-                                    isWishlisted
-                                      ? "fa-heart"
-                                      : "fa-heart-o"
-                                  }`}
-                                />
+                              <button type="button" className="productHoverAction" onClick={(event) => handleSelectOptions(event, product)} aria-label="Add to cart">
+                                <i className="fa fa-shopping-cart" />
                               </button>
                             </div>
                           )}
-
-                          {/* SELECT OPTIONS */}
-
                           {!isCartPopupOpen && (
-                            <button
-                              type="button"
-                              className="productOptionsButton"
-                              onClick={(
-                                event
-                              ) =>
-                                handleSelectOptions(
-                                  event,
-                                  product
-                                )
-                              }
-                            >
-                              <span className="productOptionsText">
-                                SELECT OPTIONS
-                              </span>
-
+                            <button type="button" className="productOptionsButton" onClick={(event) => handleSelectOptions(event, product)}>
+                              <span className="productOptionsText">SELECT OPTIONS</span>
                               <i className="fa fa-shopping-cart productOptionsCartIcon" />
                             </button>
                           )}
-
-                          {/* CART POPUP */}
-
-                          {isCartPopupOpen &&
-                            cartPopupProduct && (
-                              <div
-                                className="productCartPopup"
-                                onClick={(
-                                  event
-                                ) =>
-                                  event.stopPropagation()
-                                }
-                              >
-                                <div className="productCartPopupInner">
-
-                                  {/* CLOSE */}
-
-                                  <button
-                                    type="button"
-                                    className="productCartPopupClose"
-                                    onClick={
-                                      closeCartPopup
-                                    }
-                                    aria-label="Close"
-                                  >
-                                    ×
-                                  </button>
-
-                                  {/* PRODUCT IMAGE */}
-
-                                  <img
-                                    src={getProductImage(
-                                      cartPopupProduct
-                                    )}
-                                    alt={getProductName(
-                                      cartPopupProduct
-                                    )}
-                                    className="productCartPopupImage"
-                                    onError={(
-                                      event
-                                    ) => {
-                                      event.currentTarget.src =
-                                        "/uploads/no-image.png";
-                                    }}
-                                  />
-
-                                  {/* PRODUCT NAME */}
-
-                                  <div className="productCartPopupName">
-                                    {getProductName(
-                                      cartPopupProduct
-                                    )}
-                                  </div>
-
-                                  {/* WEIGHT */}
-
-                                  <div className="productCartPopupLabel">
-                                    Select Weight
-                                  </div>
-
-                                  <div className="productWeightOptions">
-                                    {getWeightOptions(
-                                      cartPopupProduct
-                                    ).map(
-                                      (
-                                        option
-                                      ) => (
-                                        <button
-                                          key={
-                                            option.label
-                                          }
-                                          type="button"
-                                          className={`productWeightButton ${
-                                            selectedWeight ===
-                                            option.label
-                                              ? "active"
-                                              : ""
-                                          }`}
-                                          onClick={(
-                                            event
-                                          ) => {
-                                            event.stopPropagation();
-
-                                            setSelectedWeight(
-                                              option.label
-                                            );
-                                          }}
-                                        >
-                                          {
-                                            option.label
-                                          }
-                                        </button>
-                                      )
-                                    )}
-                                  </div>
-
-                                  {/* PRICE */}
-
-                                  <div className="productCartPopupPrice">
-                                    ₹
-                                    {getCartPopupPrice(
-                                      cartPopupProduct
-                                    ).toLocaleString(
-                                      "en-IN"
-                                    )}
-                                  </div>
-
-                                  {/* QUANTITY */}
-
-                                  <div
-                                    className="productQuantityRow"
-                                    onClick={(
-                                      event
-                                    ) =>
-                                      event.stopPropagation()
-                                    }
-                                  >
-                                    <button
-                                      type="button"
-                                      className="productQuantityButton"
-                                      onClick={
-                                        decreaseCartQuantity
-                                      }
-                                    >
-                                      −
-                                    </button>
-
-                                    <span className="productQuantityValue">
-                                      {
-                                        cartQuantity
-                                      }
-                                    </span>
-
-                                    <button
-                                      type="button"
-                                      className="productQuantityButton"
-                                      onClick={
-                                        increaseCartQuantity
-                                      }
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-
-                                  {/* ADD CART */}
-
-                                  <button
-                                    type="button"
-                                    className="productAddCartButton"
-                                    onClick={
-                                      handleAddToCart
-                                    }
-                                  >
-                                    ADD TO CART
-                                  </button>
+                          {isCartPopupOpen && cartPopupProduct && (
+                            <div className="productCartPopup" onClick={(event) => event.stopPropagation()}>
+                              <div className="productCartPopupInner">
+                                <button type="button" className="productCartPopupClose" onClick={closeCartPopup} aria-label="Close">×</button>
+                                <div className="cartWeightSelect">
+                                  <label htmlFor="weightSelect">Select Weight</label>
+                                  <select id="weightSelect" value={selectedWeight} onChange={(event) => {setSelectedWeight(event.target.value);}}>
+                                    <option value="">Select Weight</option>
+                                    {getWeightOptions(cartPopupProduct).map((option) => (
+                                      <option key={option.label} value={option.label}>{option.label}</option>
+                                    ))}
+                                  </select>
                                 </div>
+                                <button type="button" className="cartPopupAddButton" onClick={handleAddToCart} disabled={!selectedWeight}>ADD TO CART</button>
                               </div>
-                            )}
-                        </div>
-
-                        {/* NAME */}
-
-                        <div className="productCardName">
-                          {getProductName(
-                            product
+                            </div>
                           )}
                         </div>
-
-                        {/* PRICE */}
-
-                        {hasOffer(
-                          product
-                        ) ? (
+                        <div className="productCardName">
+                          {getProductName(product)}
+                        </div>
+                        {hasOffer(product) ? (
                           <div className="productPrice">
                             <span className="originalPrice">
-                              ₹
-                              {originalPrice.toLocaleString(
-                                "en-IN"
-                              )}
+                              ₹{originalPrice.toLocaleString("en-IN")}
                             </span>
-
                             <span className="offerPrice">
-                              ₹
-                              {offerPrice.toLocaleString(
-                                "en-IN"
-                              )}
+                              ₹{offerPrice.toLocaleString("en-IN")}
                             </span>
                           </div>
                         ) : (
                           <div className="productPrice">
                             <span className="offerPrice">
-                              ₹
-                              {getDisplayPrice(
-                                product
-                              ).toLocaleString(
-                                "en-IN"
-                              )}
+                              ₹{getDisplayPrice(product).toLocaleString("en-IN")}
                             </span>
                           </div>
                         )}
@@ -3618,211 +2713,65 @@ function ShopContent() {
                 )}
               </div>
             )}
-          </main>
+          </main> 
         </div>
       </section>
-
-      {/* MOBILE SIDEBAR OVERLAY */}
-
-      <div
-        className={`mobileSidebarOverlay ${
-          sidebarOpen
-            ? "active"
-            : ""
-        }`}
-        onClick={() =>
-          setSidebarOpen(false)
-        }
-      />
-
-      {/* =====================================================
-          QUICK VIEW
-      ===================================================== */}
-
-      {quickViewOpen &&
-        quickProduct && (
-          <div
-            className="quickViewOverlay"
-            onClick={
-              closeQuickView
-            }
-          >
-            <div
-              className="quickViewModal"
-              onClick={(
-                event
-              ) =>
-                event.stopPropagation()
-              }
-            >
-              <button
-                type="button"
-                className="quickViewClose"
-                onClick={
-                  closeQuickView
-                }
-                aria-label="Close"
-              >
-                ×
-              </button>
-
-              {/* IMAGE */}
-
+      <div className={`mobileSidebarOverlay ${sidebarOpen ? "active" : ""}`} onClick={() => setSidebarOpen(false)}/>
+      {quickViewOpen && quickProduct && (
+          <div className="quickViewOverlay" onClick={closeQuickView}>
+            <div className="quickViewModal" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="quickViewClose" onClick={closeQuickView}aria-label="Close">×</button>
               <div className="quickViewImageBox">
-                <img
-                  src={getProductImage(
-                    quickProduct
-                  )}
-                  alt={getProductName(
-                    quickProduct
-                  )}
-                  className="quickViewImage"
-                  onError={(
-                    event
-                  ) => {
-                    event.currentTarget.src =
-                      "/uploads/no-image.png";
-                  }}
-                />
+                <img src={getProductImage(quickProduct)} alt={getProductName(quickProduct)} className="quickViewImage" onError={(event) => {event.currentTarget.src = "/uploads/no-image.png";}}/>
               </div>
-
-              {/* INFO */}
-
               <div className="quickViewInfo">
-
                 <h2 className="quickViewTitle">
-                  {getProductName(
-                    quickProduct
-                  )}
+                  {getProductName(quickProduct)}
                 </h2>
-
                 <div className="quickViewCategory">
-                  {getProductCategory(
-                    quickProduct
-                  )}
+                  {getProductCategory(quickProduct)}
                 </div>
-
-                {/* PRICE */}
-
-                {hasOffer(
-                  quickProduct
-                ) ? (
+                {hasOffer(quickProduct) ? (
                   <div className="quickViewPrice">
                     <span className="quickViewOriginalPrice">
-                      ₹
-                      {getOriginalPrice(
-                        quickProduct
-                      ).toLocaleString(
-                        "en-IN"
-                      )}
+                      ₹{getOriginalPrice(quickProduct).toLocaleString("en-IN")}
                     </span>
-
                     <span className="quickViewOfferPrice">
-                      ₹
-                      {getOfferPrice(
-                        quickProduct
-                      ).toLocaleString(
-                        "en-IN"
-                      )}
+                      ₹{getOfferPrice(quickProduct).toLocaleString("en-IN")}
                     </span>
                   </div>
                 ) : (
                   <div className="quickViewPrice">
                     <span className="quickViewOfferPrice">
-                      ₹
-                      {getDisplayPrice(
-                        quickProduct
-                      ).toLocaleString(
-                        "en-IN"
-                      )}
+                      ₹{getDisplayPrice(quickProduct).toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
-
-                {/* DESCRIPTION */}
-
                 <div className="quickViewDescription">
-                  {quickProduct?.description ||
-                  quickProduct?.short_description ||
-                  quickProduct?.shortDescription ? (
-                    quickProduct?.description ||
-                    quickProduct?.short_description ||
-                    quickProduct?.shortDescription
-                  ) : (
+                  {quickProduct?.description || quickProduct?.short_description || quickProduct?.shortDescription ? (quickProduct?.description || quickProduct?.short_description || quickProduct?.shortDescription) : (
                     <>
-                      View this product for
-                      more details and
-                      available options.
+                      View this product for more details and available options.
                     </>
                   )}
                 </div>
-
-                {/* BUTTONS */}
-
                 <div className="quickViewButtons">
-
-                  <button
-                    type="button"
-                    className="quickViewButton"
-                    onClick={() =>
-                      handleProductClick(
-                        quickProduct
-                      )
-                    }
-                  >
-                    VIEW PRODUCT
+                  <button type="button" className="quickViewButton" onClick={() => handleProductClick(quickProduct)}>VIEW PRODUCT</button>
+                  <button type="button" className="quickViewSecondaryButton" onClick={() => handleWishlistClick( {stopPropagation: () => {},}, quickProduct)}>
+                    {wishlistIds.includes(String(getProductId(quickProduct))) ? "REMOVE WISHLIST" : "ADD TO WISHLIST"}
                   </button>
-
-                  <button
-                    type="button"
-                    className="quickViewSecondaryButton"
-                    onClick={() =>
-                      handleWishlistClick(
-                        {
-                          stopPropagation:
-                            () => {},
-                        },
-                        quickProduct
-                      )
-                    }
-                  >
-                    {wishlistIds.includes(
-                      String(
-                        getProductId(
-                          quickProduct
-                        )
-                      )
-                    )
-                      ? "REMOVE WISHLIST"
-                      : "ADD TO WISHLIST"}
-                  </button>
-
                 </div>
               </div>
             </div>
           </div>
-        )}
+      )}
     </>
   );
 }
-
-/* =========================================================
-   SUSPENSE WRAPPER
-========================================================= */
-
 export default function ShopPage() {
   return (
     <Suspense
       fallback={
-        <div
-          style={{
-            minHeight: "70vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "16px",
-          }}
-        >
+        <div style={{minHeight: "70vh", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px",}}>
           Loading shop...
         </div>
       }
