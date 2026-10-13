@@ -1,9 +1,6 @@
-
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
 export default function Header() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [passwordShow, setPasswordShow] = useState(false);
@@ -14,84 +11,54 @@ export default function Header() {
   const [mobileDatesOpen, setMobileDatesOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-
   const [cart, setCart] = useState([]);
   const [fullName, setFullName] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
-
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-
   const [settings, setSettings] = useState({
     logo: "",
     phone: "",
     email: "",
     address: "",
   });
-
-  // Open cart after refresh
   useEffect(() => {
-    const shouldOpenCart = sessionStorage.getItem(
-      "openCartAfterRefresh"
-    );
-
+    const shouldOpenCart = sessionStorage.getItem("openCartAfterRefresh");
     if (shouldOpenCart === "true") {
       sessionStorage.removeItem("openCartAfterRefresh");
-
-      setTimeout(() => {
-        setCartOpen(true);
-      }, 300);
+      setTimeout(() => {setCartOpen(true);}, 300);
     }
   }, []);
-
-  // Load website settings
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await fetch("/api/admin/settings", {
-          cache: "no-store",
-        });
-
+        const response = await fetch("/api/admin/settings", {cache: "no-store",});
         const data = await response.json();
-
         if (data.success && data.settings) {
-          setSettings({
-            logo: data.settings.logo || "",
-            phone: data.settings.phone || "",
-            email: data.settings.email || "",
-            address: data.settings.address || "",
-          });
+          setSettings({logo: data.settings.logo || "", phone: data.settings.phone || "", email: data.settings.email || "", address: data.settings.address || "",});
         }
       } catch (error) {
         console.error("Header settings error:", error);
       }
     };
-
     loadSettings();
   }, []);
-
-  // Load cart and logged-in user
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
         const savedCart = localStorage.getItem("cart");
-
         if (savedCart) {
           setCart(JSON.parse(savedCart));
         }
-
         const savedUser = localStorage.getItem("user");
-
         if (savedUser) {
           const user = JSON.parse(savedUser);
-
           if (user?.logged_in) {
             setLoggedIn(true);
             setFullName(user.full_name || "");
@@ -101,172 +68,85 @@ export default function Header() {
         console.error("Header storage error:", error);
       }
     }, 0);
-
     return () => clearTimeout(timer);
   }, []);
-
-  // Login
   const handleLogin = async (e) => {
     e.preventDefault();
-
     if (loginLoading) return;
-
     setLoginMessage("");
     setLoginLoading(true);
-
     try {
       const response = await fetch("/api/users/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: loginEmail.trim(),
-          password: loginPassword,
-        }),
+        body: JSON.stringify({email: loginEmail.trim(), password: loginPassword,}),
       });
-
       const data = await response.json();
-
       if (!response.ok || !data?.success || !data?.user) {
-        setLoginMessage(
-          data?.message || "Invalid email or password."
-        );
+        setLoginMessage(data?.message || "Invalid email or password.");
         return;
       }
-
       const user = data.user;
-
       const getValue = (...keys) => {
         for (const key of keys) {
           const value = user[key];
-
-          if (
-            value !== undefined &&
-            value !== null &&
-            String(value).trim() !== ""
-          ) {
+          if (value !== undefined && value !== null && String(value).trim() !== "") {
             return String(value).trim();
           }
         }
-
         return "";
       };
-
       const userData = {
         logged_in: true,
         id: String(user.id || user._id || ""),
-        full_name: getValue(
-          "full_name",
-          "fullName",
-          "name",
-          "fullname"
-        ),
+        full_name: getValue("full_name", "fullName", "name", "fullname"),
         email: getValue("email") || loginEmail.trim(),
-        phone: getValue(
-          "phone",
-          "mobile",
-          "mobile_number",
-          "phone_number"
-        ),
-        address: getValue(
-          "address",
-          "delivery_address",
-          "deliveryAddress",
-          "shipping_address",
-          "full_address"
-        ),
-        city: getValue(
-          "city",
-          "delivery_city",
-          "deliveryCity",
-          "shipping_city"
-        ),
-        state: getValue(
-          "state",
-          "delivery_state",
-          "deliveryState",
-          "shipping_state"
-        ),
-        pincode: getValue(
-          "pincode",
-          "pin_code",
-          "pinCode",
-          "postal_code",
-          "postalCode",
-          "zip_code"
-        ),
-        country:
-          getValue(
-            "country",
-            "delivery_country",
-            "deliveryCountry"
-          ) || "India",
+        phone: getValue("phone", "mobile", "mobile_number", "phone_number"),
+        address: getValue("address", "delivery_address", "deliveryAddress", "shipping_address", "full_address"),
+        state: getValue("state", "delivery_state", "deliveryState", "shipping_state"),
+        pincode: getValue("pincode", "pin_code", "pinCode", "postal_code", "postalCode", "zip_code"),
+        country: getValue("country", "delivery_country", "deliveryCountry") || "India",
       };
-
       if (!userData.id) {
-        setLoginMessage(
-          "User ID is missing from the server response."
-        );
+        setLoginMessage("User ID is missing from the server response.");
         return;
       }
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(userData)
-      );
-
+      localStorage.setItem("user", JSON.stringify(userData));
       setLoggedIn(true);
       setFullName(userData.full_name || "User");
-
       setLoginOpen(false);
       setLoginEmail("");
       setLoginPassword("");
       setLoginMessage("");
-
       window.location.replace("/");
     } catch (error) {
       console.error("Header login error:", error);
-
-      setLoginMessage(
-        "Something went wrong. Please try again."
-      );
+      setLoginMessage("Something went wrong. Please try again.");
     } finally {
       setLoginLoading(false);
     }
   };
-
-  // Logout
   const logout = () => {
     localStorage.removeItem("user");
-
     setLoggedIn(false);
     setFullName("");
     setUserMenuOpen(false);
-
     window.location.href = "/";
   };
-
-  // Search products
   const searchProducts = async (value) => {
     setSearchQuery(value);
-
     if (!value.trim()) {
       setSearchResults([]);
       setSearchOpen(false);
       return;
     }
-
     setSearchOpen(true);
     setSearchLoading(true);
-
     try {
-      const response = await fetch(
-        `/api/products/search?q=${encodeURIComponent(value)}`
-      );
-
+      const response = await fetch(`/api/products/search?q=${encodeURIComponent(value)}`);
       const data = await response.json();
-
       if (data.success) {
         setSearchResults(data.products || []);
       } else {
@@ -279,130 +159,51 @@ export default function Header() {
       setSearchLoading(false);
     }
   };
-
-  // Submit search
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-
     if (!searchQuery.trim()) return;
-
     setSearchOpen(false);
-
-    window.location.href = `/shop?search=${encodeURIComponent(
-      searchQuery.trim()
-    )}`;
+    window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
   };
-
-  // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest(".search-box")) {
         setSearchOpen(false);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
-
     return () => {
-      document.removeEventListener(
-        "click",
-        handleClickOutside
-      );
+      document.removeEventListener("click", handleClickOutside);
     };
   }, []);
-
-  // Cart calculations
-  const cartCount = cart.reduce(
-    (total, item) =>
-      total + Number(item.quantity || 0),
-    0
-  );
-
-  // Assumes final_price is the price per item
-  const cartTotal = cart.reduce(
-    (total, item) =>
-      total +
-      Number(item.final_price || 0) *
-        Number(item.quantity || 1),
-    0
-  );
-
-  // Remove cart item
+  const cartCount = cart.reduce((total, item) => total + Number(item.quantity || 0), 0);
+  const cartTotal = cart.reduce((total, item) => total + Number(item.final_price || 0) * Number(item.quantity || 1), 0);
   const removeCartItem = (index) => {
-    const updatedCart = cart.filter(
-      (_, i) => i !== index
-    );
-
+    const updatedCart = cart.filter((_, i) => i !== index);
     setCart(updatedCart);
-
-    localStorage.setItem(
-      "cart",
-      JSON.stringify(updatedCart)
-    );
-
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
     window.dispatchEvent(new Event("cartUpdated"));
   };
-
-  // Close mobile menu
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
-
-  // Contact details
-  const phoneNumber =
-    settings.phone || "+91 97518 11222";
-
-  const whatsappNumber =
-    phoneNumber.replace(/\D/g, "") || "919751811222";
-
-  // Product image
+  const closeMobileMenu = () => {setMobileMenuOpen(false);};
+  const phoneNumber = settings.phone || "+91 97518 11222";
+  const whatsappNumber = phoneNumber.replace(/\D/g, "") || "919751811222";
   const getProductImage = (product) => {
     if (!product) return null;
-
-    if (
-      !Array.isArray(product.images) ||
-      product.images.length === 0
-    ) {
+    if (!Array.isArray(product.images) || product.images.length === 0) {
       return null;
     }
-
     const image = product.images[0];
-
     if (!image) return null;
-
-    if (
-      image.startsWith("data:") ||
-      image.startsWith("http://") ||
-      image.startsWith("https://") ||
-      image.startsWith("/")
-    ) {
+    if (image.startsWith("data:") || image.startsWith("http://") || image.startsWith("https://") || image.startsWith("/")) {
       return image;
     }
-
     return image;
   };
-
-  // Original product price
   const getOriginalPrice = (product) => {
-    return Number(
-      product?.price ||
-      product?.mrp ||
-      product?.regular_price ||
-      product?.original_price ||
-      0
-    );
+    return Number(product?.price || product?.mrp || product?.regular_price || product?.original_price || 0);
   };
-
-  // Offer product price
   const getOfferPrice = (product) => {
-    return Number(
-      product?.offerPrice ||
-      product?.offer_price ||
-      product?.final_price ||
-      product?.sale_price ||
-      product?.selling_price ||
-      0
-    );
+    return Number(product?.offerPrice || product?.offer_price || product?.final_price || product?.sale_price || product?.selling_price || 0);
   };
   return (
     <>
