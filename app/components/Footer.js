@@ -226,10 +226,10 @@ export default function Footer() {
                 <Link href="/policies/shipping">Shipping Policy</Link>
               </li>
               <li>
-                <Link href="/return-policy">Refunds &amp; Returns</Link>
+                <Link href="/policies/return-policy">Refunds &amp; Returns</Link>
               </li>
               <li>
-                <Link href="/cancellation">Cancellation</Link>
+                <Link href="/policies/cancellation">Cancellation</Link>
               </li>
             </ul>
           </div>
