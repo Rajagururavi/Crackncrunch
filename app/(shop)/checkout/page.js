@@ -442,8 +442,6 @@ export default function CheckoutPage() {
                 </Link>
               </section>
             </div>
-
-            {/* Order summary */}
             <aside className="checkout-sidebar">
               <section className="checkout-card checkout-summary">
                 <div className="checkout-card-heading">
@@ -453,46 +451,45 @@ export default function CheckoutPage() {
                     <p>Review your order total</p>
                   </div>
                 </div>
-
                 <div className="checkout-summary-row">
                   <span>Subtotal</span>
                   <strong>{formatPrice(subtotal)}</strong>
                 </div>
-
                 <div className="checkout-summary-row">
                   <span>Shipping</span>
                   <strong>{formatPrice(SHIPPING_CHARGE)}</strong>
                 </div>
-
                 <div className="checkout-summary-total">
                   <span>Total</span>
                   <strong>{formatPrice(total)}</strong>
                 </div>
-
+                <div className="checkout-payment-method">
+                  <div className="checkout-payment-heading">
+                    <div className="checkout-payment-title">
+                      <input type="radio" name="paymentMethod" checked readOnly aria-label="Credit Card, Debit Card or NetBanking" />
+                      <span>Credit Card/Debit Card/NetBaning</span>
+                    </div>
+                    <img src="https://cdn.razorpay.com/static/assets/logo/rzp_payment_icon.svg" alt="Razorpay" />
+                  </div>
+                    <p> Pay securely by Credit or Debit card or Internet Banking through Razorpay.</p>
+                </div>
                 <label className="checkout-terms">
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(event) =>
-                      setTermsAccepted(event.target.checked)
-                    }
-                  />
+                  <input type="checkbox" checked={termsAccepted} onChange={(event) =>
+                    setTermsAccepted(event.target.checked)
+                  } />
                   <span>
                     I agree to the{" "}
                     <Link href="/terms">Terms and Conditions</Link>.
                   </span>
                 </label>
-
                 {error && (
                   <div className="checkout-error" role="alert">
                     {error}
                   </div>
                 )}
-
                 <button className="checkout-place-order" type="submit">
                   Place Order <span>→</span>
                 </button>
-
                 <p className="checkout-payment-note">
                   Your delivery address will be confirmed before payment.
                 </p>
@@ -501,30 +498,16 @@ export default function CheckoutPage() {
           </form>
         )}
       </div>
-
-      {/* Address confirmation popup */}
       {showAddressConfirm && (
-        <div
-          className="checkout-modal-overlay"
-          onClick={() => {
-            if (!submitting) setShowAddressConfirm(false);
-          }}
-        >
-          <section
-            className="checkout-confirm-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="checkout-confirm-title"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div className="checkout-modal-overlay" onClick={() => {
+          if (!submitting) setShowAddressConfirm(false);
+        }} >
+          <section className="checkout-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-confirm-title" onClick={(event) => event.stopPropagation()}>
             <div className="checkout-confirm-icon">📍</div>
-
             <h2 id="checkout-confirm-title">Confirm Delivery Address</h2>
-
             <p className="checkout-confirm-description">
               Is this address correct? Confirm it to continue to payment.
             </p>
-
             <div className="checkout-address-preview">
               <div>
                 <span>Name</span>
@@ -547,23 +530,11 @@ export default function CheckoutPage() {
                 <strong>{form.country || "India"}</strong>
               </div>
             </div>
-
             <div className="checkout-modal-actions">
-              <button
-                type="button"
-                className="checkout-edit-address"
-                disabled={submitting}
-                onClick={() => setShowAddressConfirm(false)}
-              >
+              <button type="button" className="checkout-edit-address" disabled={submitting} onClick={() => setShowAddressConfirm(false)}>
                 Go Back &amp; Edit
               </button>
-
-              <button
-                type="button"
-                className="checkout-confirm-address"
-                disabled={submitting}
-                onClick={confirmAddressAndContinue}
-              >
+              <button type="button" className="checkout-confirm-address" disabled={submitting} onClick={confirmAddressAndContinue} >
                 {submitting ? "Please wait..." : "OK, Continue"}
               </button>
             </div>
@@ -571,6 +542,49 @@ export default function CheckoutPage() {
         </div>
       )}
       <style jsx>{`
+        .checkout-payment-method {
+          margin: 16px 0;
+          padding: 14px;
+          border: 1px solid #e2e2e2;
+          border-radius: 6px;
+          background: #fff;
+        }
+        .checkout-payment-heading {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #333;
+        }
+        .checkout-payment-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+        }
+        .checkout-payment-title input {
+          margin: 0;
+          accent-color: #3395ff;
+          flex-shrink: 0;
+        }
+        .checkout-payment-title span {
+          line-height: 1.5;
+        }
+        .checkout-payment-heading img {
+          display: block;
+          width: 150px;
+          max-height: 75px;
+          object-fit: contain;
+          margin-left: 22px;
+        }
+        .checkout-payment-method p {
+          margin: 10px 0 0 22px;
+          font-size: 12px;
+          line-height: 1.6;
+          color: #666;
+        }
         .checkout-page {
           width: 100%;
           min-height: 60vh;

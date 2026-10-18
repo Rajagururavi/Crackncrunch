@@ -1,3 +1,4 @@
+
 import clientPromise from "@/lib/mongodb";
 
 export async function GET() {
@@ -10,6 +11,11 @@ export async function GET() {
       {
         projection: {
           logo: 1,
+          gst: 1,
+          fssai: 1,
+          address: 1,
+          phone: 1,
+          email: 1,
         },
       }
     );
@@ -28,6 +34,13 @@ export async function GET() {
     return Response.json({
       success: true,
       logo,
+      contact: {
+        fssaiLicenseNo: admin?.fssai || "",
+        gstRegistrationNo: admin?.gst || "",
+        address: admin?.address || "",
+        phone: admin?.phone || "",
+        email: admin?.email || "",
+      },
     });
   } catch (error) {
     console.error("SITE SETTINGS ERROR:", error);
@@ -36,6 +49,7 @@ export async function GET() {
       {
         success: false,
         logo: "",
+        contact: {},
       },
       { status: 500 }
     );
