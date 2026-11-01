@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+const BANNERS = [
+  "/uploads/2.PNG",
+  "/uploads/3.PNG",
+  "/uploads/4.PNG",
+];
 export default function HomePage() {
-  const banners = [
-    "/uploads/2.PNG",
-    "/uploads/3.PNG",
-    "/uploads/4.PNG",
-  ];
   const [currentSlide, setCurrentSlide] = useState(0);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -19,10 +19,8 @@ export default function HomePage() {
   const [selectedOptionsProduct, setSelectedOptionsProduct] = useState(null);
   const [selectedWeights, setSelectedWeights] = useState({});
   const [wishlistIds, setWishlistIds] = useState([]);
-  // Each brand has its own horizontal product carousel.
   const brandTrackRefs = useRef({});
   const [brandScrollState, setBrandScrollState] = useState({});
-
   const updateBrandScrollState = (brandKey) => {
     const element = brandTrackRefs.current[brandKey];
     if (!element) return;
@@ -33,25 +31,34 @@ export default function HomePage() {
       if (current?.canScrollPrev === canScrollPrev && current?.canScrollNext === canScrollNext) {
         return previous;
       }
-      return { ...previous, [brandKey]: { canScrollPrev, canScrollNext } };
+      return {
+        ...previous,
+        [brandKey]: {canScrollPrev, canScrollNext,},
+      };
     });
   };
-
   const scrollBrandProducts = (brandKey, direction) => {
     const element = brandTrackRefs.current[brandKey];
     if (!element) return;
-    element.scrollBy({ left: direction * element.clientWidth, behavior: "smooth" });
-    // Update after the browser starts the smooth scroll; onScroll keeps this current.
-    window.requestAnimationFrame(() => updateBrandScrollState(brandKey));
+    element.scrollBy({
+      left: direction * element.clientWidth,
+      behavior: "smooth",
+    });
+    window.requestAnimationFrame(() => {
+      updateBrandScrollState(brandKey);
+    });
   };
-
   useEffect(() => {
     const updateAllBrandArrows = () => {
-      Object.keys(brandTrackRefs.current).forEach(updateBrandScrollState);
+      Object.keys(brandTrackRefs.current).forEach((key) => {
+        updateBrandScrollState(key);
+      });
     };
     updateAllBrandArrows();
     window.addEventListener("resize", updateAllBrandArrows);
-    return () => window.removeEventListener("resize", updateAllBrandArrows);
+    return () => {
+      window.removeEventListener("resize", updateAllBrandArrows);
+    };
   }, [brands, loading]);
   useEffect(() => {
     let cancelled = false;
@@ -65,9 +72,7 @@ export default function HomePage() {
           throw new Error("Failed to load home data");
         }
         const data = await response.json();
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         if (data?.success) {
           setCategories(Array.isArray(data.categories) ? data.categories : []);
           setBrands(Array.isArray(data.brands) ? data.brands : []);
@@ -76,9 +81,7 @@ export default function HomePage() {
           setBrands([]);
         }
       } catch (error) {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         console.error("Home data error:", error);
         setCategories([]);
         setBrands([]);
@@ -89,30 +92,27 @@ export default function HomePage() {
       }
     };
     loadHomeData();
-    return () => {cancelled = true;};
+    return () => {
+      cancelled = true;
+    };
   }, []);
   useEffect(() => {
-    if (banners.length <= 1) {
-      return;
-    }
+    if (BANNERS.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => prev >= banners.length - 1 ? 0 : prev + 1);
+      setCurrentSlide((prev) => prev >= BANNERS.length - 1 ? 0 : prev + 1);
     }, 5000);
-    return () => {
-      clearInterval(timer);
-    };
-  }, [banners.length]);
+    return () => clearInterval(timer);
+  }, []);
   const nextSlide = () => {
-    setCurrentSlide((prev) => prev >= banners.length - 1 ? 0 : prev + 1);
+    setCurrentSlide((prev) => prev >= BANNERS.length - 1 ? 0 : prev + 1);
   };
-  const prevSlide = () => {setCurrentSlide((prev) => prev <= 0 ? banners.length - 1 : prev - 1);};
+  const prevSlide = () => {
+    setCurrentSlide((prev) => prev <= 0 ? BANNERS.length - 1 : prev - 1);
+  };
   const getImage = (image, folder = "") => {
-    if (!image) {
-      return "";
-    }
-    if (image.startsWith("data:")) {
-      return image;
-    }
+    if (!image) return "";
+    if (typeof image !== "string") return "";
+    if (image.startsWith("data:")) return image;
     if (image.startsWith("http://") || image.startsWith("https://") || image.startsWith("/")) {
       return image;
     }
@@ -121,13 +121,15 @@ export default function HomePage() {
     }
     return image;
   };
-  const getProductId = (product) => {return product?._id || product?.id || "";};
+  const getProductId = (product) => {
+    return product?._id || product?.id || "";
+  };
   const getProductSlug = (product) => {
     const productName = product?.productName || product?.product_name || product?.product_title || product?.name || product?.title || "";
-    return String(productName).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return String(productName) .toLowerCase() .trim() .replace(/[^a-z0-9]+/g, "-") .replace(/^-+|-+$/g, "");
   };
   const getProductTitle = (product) => {
-    return product?.productName || "";
+    return (product?.productName || product?.product_name || product?.product_title || product?.name || product?.title || "");
   };
   const getProductOriginalPrice = (product) => {
     return Number(product?.price || 0);
@@ -155,31 +157,18 @@ export default function HomePage() {
     }
     return "";
   };
-  const getProductImage3 = (product) => {
-    if (Array.isArray(product?.images) && product.images.length > 2) {
-      return getImage(product.images[2], "products");
-    }
-    return getProductImage1(product);
-  };
   const isProductActive = (product) => {
     const status = String(product?.stockStatus || "").trim().toLowerCase();
     return (status === "currently available" || status === "available" || status === "in stock");
   };
   const getWeightMultiplier = (weight) => {
-    if (weight === "250g") {
-      return 1;
-    }
-    if (weight === "500g") {
-      return 2;
-    }
-    if (weight === "1kg") {
-      return 4;
-    }
+    if (weight === "250g") return 1;
+    if (weight === "500g") return 2;
+    if (weight === "1kg") return 4;
     return 1;
   };
   const getWeightPrice = (product, weight) => {
-    const basePrice = getProductPrice(product);
-    return basePrice * getWeightMultiplier(weight);
+    return getProductPrice(product) * getWeightMultiplier(weight);
   };
   const openProductOptions = (product, event) => {
     event.preventDefault();
@@ -187,8 +176,7 @@ export default function HomePage() {
     const productId = getProductId(product);
     setSelectedOptionsProduct(product);
     setSelectedWeights((prev) => ({
-      ...prev,
-      [productId]: "",
+      ...prev, [productId]: "",
     }));
   };
   const closeProductOptions = (event) => {
@@ -200,9 +188,29 @@ export default function HomePage() {
   };
   const handleWeightChange = (productId, weight) => {
     setSelectedWeights((prev) => ({
-      ...prev,
-      [productId]: weight,
+      ...prev, [productId]: weight,
     }));
+  };
+  const getSavedCart = () => {
+    try {
+      const savedCart = localStorage.getItem("cart");
+      if (!savedCart) return [];
+      const parsedCart = JSON.parse(savedCart);
+      return Array.isArray(parsedCart) ? parsedCart : [];
+    } catch (error) {
+      console.error("Cart read error:", error);
+      return [];
+    }
+  };
+  const saveCartAndRefresh = (cart) => {
+    try {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      sessionStorage.setItem("openCartAfterRefresh", "true");
+      window.dispatchEvent(new Event("cartUpdated"));
+      window.location.reload();
+    } catch (error) {
+      console.error("Cart save error:", error);
+    }
   };
   const addToCart = (product) => {
     const productId = getProductId(product);
@@ -220,33 +228,17 @@ export default function HomePage() {
       quantity: 1,
       final_price: price,
     };
-    try {
-      const savedCart = localStorage.getItem("cart");
-      let cart = [];
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          if (Array.isArray(parsedCart)) {
-            cart = parsedCart;
-          }
-        } catch {
-          cart = [];
-        }
-      }
-      const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && item.weight === weight);
-      if (existingIndex !== -1) {
-        cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + 1;
-        cart[existingIndex].final_price = Number(price) * Number(cart[existingIndex].quantity);
-      } else {
-        cart.push(cartItem);
-      }
-      localStorage.setItem("cart", JSON.stringify(cart));
-      sessionStorage.setItem("openCartAfterRefresh", "true");
-      window.dispatchEvent(new Event("cartUpdated"));
-      window.location.reload();
-    } catch (error) {
-      console.error("Add cart error:", error);
+    const cart = getSavedCart();
+    const existingIndex = cart.findIndex(
+      (item) => String(item.product_id) === String(productId) && item.weight === weight
+    );
+    if (existingIndex !== -1) {
+      cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + 1;
+      cart[existingIndex].final_price = price * Number(cart[existingIndex].quantity);
+    } else {
+      cart.push(cartItem);
     }
+    saveCartAndRefresh(cart);
   };
   const openQuickView = async (product) => {
     const productId = getProductId(product);
@@ -259,9 +251,7 @@ export default function HomePage() {
       if (!productId) {
         throw new Error("Product ID is missing");
       }
-      const response = await fetch("/api/products", {
-        cache: "no-store",
-      });
+      const response = await fetch("/api/products", {cache: "no-store",});
       if (!response.ok) {
         throw new Error(`Products API failed: ${response.status}`);
       }
@@ -269,8 +259,7 @@ export default function HomePage() {
       if (!data?.success || !Array.isArray(data.products)) {
         throw new Error("Invalid products API response");
       }
-      const selectedProduct = data.products.find(
-        (item) => String(getProductId(item)) === String(productId));
+      const selectedProduct = data.products.find((item) => String(getProductId(item)) === String(productId));
       if (!selectedProduct) {
         throw new Error(`Product not found. ID: ${productId}`);
       }
@@ -291,23 +280,15 @@ export default function HomePage() {
   const changeQuickQuantity = (change) => {
     setQuickQuantity((prev) => {
       const next = prev + change;
-      if (next < 1) {
-        return 1;
-      }
-      return next;
+      return next < 1 ? 1 : next;
     });
   };
   const getQuickViewTotal = () => {
-    if (!quickProduct || !quickWeight) {
-      return 0;
-    }
-    const singlePrice = getWeightPrice(quickProduct, quickWeight);
-    return (singlePrice * quickQuantity);
+    if (!quickProduct || !quickWeight) return 0;
+    return (getWeightPrice(quickProduct, quickWeight) * quickQuantity);
   };
   const addQuickViewToCart = () => {
-    if (!quickProduct) {
-      return;
-    }
+    if (!quickProduct) return;
     if (!quickWeight) {
       alert("Please select a weight.");
       return;
@@ -322,34 +303,15 @@ export default function HomePage() {
       quantity: quickQuantity,
       final_price: price * quickQuantity,
     };
-    try {
-      const savedCart = localStorage.getItem("cart");
-      let cart = [];
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          if (Array.isArray(parsedCart)) {
-            cart = parsedCart;
-          }
-        } catch {
-          cart = [];
-        }
-      }
-      const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && item.weight === quickWeight);
-      if (existingIndex !== -1) {
-        cart[existingIndex].quantity =
-          Number(cart[existingIndex].quantity || 0) + quickQuantity;
-        cart[existingIndex].final_price = price * Number(cart[existingIndex].quantity);
-      } else {
-        cart.push(cartItem);
-      }
-      localStorage.setItem("cart", JSON.stringify(cart));
-      sessionStorage.setItem("openCartAfterRefresh", "true");
-      window.dispatchEvent(new Event("cartUpdated"));
-      window.location.reload();
-    } catch (error) {
-      console.error("Quick cart error:", error);
+    const cart = getSavedCart();
+    const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && item.weight === quickWeight);
+    if (existingIndex !== -1) {
+      cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + quickQuantity;
+      cart[existingIndex].final_price = price * Number(cart[existingIndex].quantity);
+    } else {
+      cart.push(cartItem);
     }
+    saveCartAndRefresh(cart);
   };
   const isWishlist = (productId) => {
     return wishlistIds.includes(String(productId));
@@ -358,7 +320,13 @@ export default function HomePage() {
     event.preventDefault();
     event.stopPropagation();
     const productId = String(getProductId(product));
-    const savedUser = localStorage.getItem("user");
+    let savedUser;
+    try {
+      savedUser = localStorage.getItem("user");
+    } catch {
+      alert("Please login to add products to wishlist.");
+      return;
+    }
     if (!savedUser) {
       alert("Please login to add products to wishlist.");
       return;
@@ -375,37 +343,35 @@ export default function HomePage() {
       return;
     }
     if (wishlistIds.includes(productId)) {
-      const updated = wishlistIds.filter((id) => id !== productId);
-      setWishlistIds(updated);
+      setWishlistIds((prev) => prev.filter((id) => id !== productId));
       try {
-        await fetch("/api/wishlist", {
+        const response = await fetch("/api/wishlist", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            productId,
-          }),
+          body: JSON.stringify({ productId }),
         });
+        if (!response.ok) {
+          console.error("Wishlist remove failed:", response.status);
+        }
       } catch (error) {
         console.error("Wishlist remove error:", error);
       }
       return;
     }
-    setWishlistIds((prev) => [
-      ...prev,
-      productId,
-    ]);
+    setWishlistIds((prev) => [...prev, productId]);
     try {
-      await fetch("/api/wishlist", {
+      const response = await fetch("/api/wishlist", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          productId,
-        }),
+        body: JSON.stringify({ productId }),
       });
+      if (!response.ok) {
+        console.error("Wishlist add failed:", response.status);
+      }
     } catch (error) {
       console.error("Wishlist add error:", error);
     }
@@ -427,21 +393,19 @@ export default function HomePage() {
   return (
     <>
       <div className="hero-banner">
-        <div className="banner-slider"
-          style={{
-            transform: `translateX(-${
-              currentSlide * 100
-            }%)`,
-          }}
-        >
-          {banners.map((banner, index) => (
-            <img key={index} src={banner} alt={`Banner ${
-              index + 1
-            }`} />
+        <div className="banner-slider" style={{
+          transform: `translateX(-${currentSlide * 100}%)`,
+        }}>
+          {BANNERS.map((banner, index) => (
+            <img key={banner} src={banner} alt={`Banner ${index + 1}`} />
           ))}
         </div>
-        <button className="slider-btn prev-btn" type="button" onClick={prevSlide}>❮</button>
-        <button className="slider-btn next-btn" type="button" onClick={nextSlide}>❯</button>
+        <button className="slider-btn prev-btn" type="button" onClick={prevSlide} aria-label="Previous banner">
+          ❮
+        </button>
+        <button className="slider-btn next-btn" type="button" onClick={nextSlide} aria-label="Next banner">
+          ❯
+        </button>
       </div>
       <div className="category-section">
         <h1 className="section-title">Our Categories</h1>
@@ -451,26 +415,28 @@ export default function HomePage() {
           </div>
         ) : categories.length > 0 ? (
           <div className="category-row">
-            {categories.map(
-              (category, index) => {
-                const title = category?.name || category?.cat_title || category?.title || "";
-                const image = getImage(category?.image || category?.cat_image || "", "categories");
-                return (
-                  <div className="category-column" key={
-                    category?._id || category?.id || index
-                  }>
-                    <div className="category-card">
-                      <Link href={`/shop?category=${encodeURIComponent(title)}`}>
-                        {image && (<img src={image} className="category-img" alt={title} onError={(event) => {event.currentTarget.style.display = "none"; }}/> )}
-                      </Link>
-                      <div className="category-content">
-                        <h3 className="category-title">{title}</h3>
-                      </div>
+            {categories.map((category, index) => {
+              const title = category?.name || category?.cat_title || category?.title || "";
+              const image = getImage(category?.image || category?.cat_image || "", "categories");
+              return (
+                <div className="category-column" key={category?._id || category?.id || index}>
+                  <div className="category-card">
+                    <Link href={`/shop?category=${encodeURIComponent(title)}`}>
+                      {image && (
+                        <img src={image} className="category-img" alt={title} onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}/>
+                      )}
+                    </Link>
+                    <div className="category-content">
+                      <h3 className="category-title">
+                        {title}
+                      </h3>
                     </div>
                   </div>
-                );
-              }
-            )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="no-product-msg">
@@ -478,194 +444,202 @@ export default function HomePage() {
           </div>
         )}
       </div>
-      {brands.map(
-        (brand, brandIndex) => { const brandTitle = brand?.brandName || brand?.name || brand?.brand_title || brand?.title || "";
-          const brandImage = getImage(brand?.image || brand?.brand_image || "", "brands");
-          const products = Array.isArray(brand?.products) ? brand.products : [];
-          const brandKey = String(brand?._id || brand?.id || brandIndex);
-          const arrows = brandScrollState[brandKey] || {
-            canScrollPrev: false,
-            canScrollNext: products.length > 5,
-          };
-          return (
-            <div key={brandKey}>
-              {brandImage && (
-                <div className="nutrition-banner">
-                  <img src={brandImage} alt={brandTitle} onError={(event) => {
-                    event.currentTarget.style.display = "none";
-                  }} />
-                </div>
-              )}
-              <div className="premium-section">
-                <div className="premium-header">
-                  <h2 className="premium-main-title">{brandTitle}</h2>
-                  <Link href={`/shop?brand=${encodeURIComponent(brandTitle)}`} className="premium-view-btn">View All</Link>
-                </div>
-                {products.length >
-                0 ? (
-                  <div className="brand-carousel">
-                    <button
-                      type="button"
-                      className="brand-carousel-arrow brand-carousel-prev"
-                      onClick={() => scrollBrandProducts(brandKey, -1)}
-                      disabled={!arrows.canScrollPrev}
-                      aria-label={`Previous ${brandTitle} products`}
-                      title="Previous products"
-                    >‹</button>
-                    <div
-                      className="premium-grid brand-products-track"
-                      ref={(element) => {
-                        if (element) brandTrackRefs.current[brandKey] = element;
-                        else delete brandTrackRefs.current[brandKey];
-                      }}
-                      onScroll={() => updateBrandScrollState(brandKey)}
-                    >
-                    {products.map(
-                      (product, productIndex) => {
-                        const productId = getProductId(product);
-                        const title = getProductTitle(product);
-                        const image1 = getProductImage1(product);
-                        const image2 = getProductImage2(product);
-                        const active = isProductActive(product);
-                        const selectedWeight = selectedWeights[productId] || "";
-                        const originalPrice = getProductOriginalPrice(product);
-                        const offerPrice = getProductOfferPrice(product);
-                        const optionPrice = selectedWeight ? getWeightPrice(product, selectedWeight) : getProductPrice(product);
-                        return (
-                          <div className="premium-column" key={
-                            productId || productIndex
-                          }>
-                            <div className="premium-card">
-                              <div className="image-wrapper">
-                                {active ? (
-                                  <span className="sale-badge sale">
-                                    SALE
-                                  </span>
-                                ) : (
-                                  <span className="sale-badge unavailable">
-                                    CURRENTLY UNAVAILABLE
-                                  </span>
+      {brands.map((brand, brandIndex) => {
+        const brandTitle = brand?.brandName || brand?.name || brand?.brand_title || brand?.title || "";
+        const brandImage = getImage(brand?.image || brand?.brand_image || "", "brands");
+        const products = Array.isArray(brand?.products) ? brand.products : [];
+        const brandKey = String(brand?._id || brand?.id || brandIndex);
+        const arrows = brandScrollState[brandKey] || {
+          canScrollPrev: false,
+          canScrollNext: products.length > 5,
+        };
+        return (
+          <div key={brandKey}>
+            {brandImage && (
+              <div className="nutrition-banner">
+                <img src={brandImage} alt={brandTitle} onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}/>
+              </div>
+            )}
+            <div className="premium-section">
+              <div className="premium-header">
+                <h2 className="premium-main-title">
+                  {brandTitle}
+                </h2>
+                <Link href={`/shop?brand=${encodeURIComponent(brandTitle)}`} className="premium-view-btn">
+                  View All
+                </Link>
+              </div>
+              {products.length > 0 ? (
+                <div className="brand-carousel">
+                  <button type="button" className="brand-carousel-arrow brand-carousel-prev" onClick={() =>
+                    scrollBrandProducts(brandKey, -1)
+                  } disabled={!arrows.canScrollPrev} aria-label={`Previous ${brandTitle} products`} title="Previous products">
+                    ‹
+                  </button>
+                  <div className="premium-grid brand-products-track" ref={(element) => {
+                    if (element) {
+                      brandTrackRefs.current[brandKey] = element;
+                    } else {
+                      delete brandTrackRefs.current[brandKey];
+                    }
+                  }} onScroll={() => updateBrandScrollState(brandKey)}>
+                    {products.map((product, productIndex) => {
+                      const productId = getProductId(product);
+                      const title = getProductTitle(product);
+                      const image1 = getProductImage1(product);
+                      const image2 = getProductImage2(product);
+                      const active = isProductActive(product);
+                      const selectedWeight = selectedWeights[productId] || "";
+                      const originalPrice = getProductOriginalPrice(product);
+                      const offerPrice = getProductOfferPrice(product);
+                      const optionPrice = selectedWeight ? getWeightPrice(product, selectedWeight) : getProductPrice(product);
+                      const optionsOpen = selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId);
+                      return (
+                        <div className="premium-column" key={productId || productIndex}>
+                          <div className="premium-card">
+                            <div className="image-wrapper">
+                              {active ? (
+                                <span className="sale-badge sale">SALE</span>
+                              ) : (
+                                <span className="sale-badge unavailable">CURRENTLY UNAVAILABLE</span>
+                              )}
+                              <Link href={`/product/${encodeURIComponent(getProductSlug(product))}`} className="product-image-link" onClick={(event) => {
+                                if (!getProductSlug(product)) {
+                                  event.preventDefault();
+                                }
+                              }}>
+                                {image1 && (
+                                  <img src={image1} className="premium-image image1" alt={title || "Product image"} onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}/>
                                 )}
-                                <Link href={`/product/${encodeURIComponent(getProductSlug(product))}`} className="product-image-link" onClick={(event) => {
-                                  if (!getProductSlug(product)) {
-                                    event.preventDefault();
-                                  }
-                                }} >
-                                  {image1 && (
-                                    <img src={image1} className="premium-image image1" alt={title || "Product image"} onError={(event) => {
-                                      event.currentTarget.style.display = "none";
-                                    }} />
-                                  )}
-                                  {image2 && image2 !== image1 && (
-                                    <img src={image2} className="premium-image image2" alt={title || "Product image"} onError={(event) => {
-                                      event.currentTarget.style.display = "none";
-                                    }} />
-                                  )}
-                                </Link>
-                                <div className="product-bottom-action">
-                                  {active ? (
-                                    <div className="select-option-btn">
-                                      <span className={selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId) ? "option-text option-hidden" : "option-text"}>
-                                        SELECT OPTIONS
-                                      </span>
-                                      <button type="button" className="option-cart" onClick={(event) => openProductOptions(product, event)}>
-                                        <i className="fa fa-shopping-cart"></i>
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button type="button" className="select-option-btn disabled-btn" disabled>
-                                      CURRENTLY UNAVAILABLE
+                                {image2 && image2 !== image1 && (
+                                  <img src={image2} className="premium-image image2" alt={title || "Product image"} onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}/>
+                                )}
+                              </Link>
+                              {active ? (
+                                <button type="button" className="mobile-cart-action" title="Select weight and add to cart" aria-label="Select weight and add to cart" onClick={(event) =>
+                                  openProductOptions(product, event)
+                                }>
+                                  <i className="fa fa-shopping-cart"></i>
+                                </button>
+                              ) : (
+                                <button type="button" className="mobile-cart-action mobile-cart-disabled" title="Currently unavailable" aria-label="Currently unavailable" disabled>
+                                  <i className="fa fa-shopping-cart"></i>
+                                </button>
+                              )}
+                              <div className="product-bottom-action">
+                                {active ? (
+                                  <div className="select-option-btn">
+                                    <span className={optionsOpen ? "option-text option-hidden" : "option-text"}>
+                                      SELECT OPTIONS
+                                    </span>
+                                    <button type="button" className="option-cart" onClick={(event) =>
+                                      openProductOptions(product, event)
+                                    }>
+                                      <i className="fa fa-shopping-cart"></i>
                                     </button>
-                                  )}
-                                </div>
-                                <div className="product-hover-actions">
-                                  <a href="#" className="hover-action" title="Add to Compare" onClick={compareClicked}>
-                                    <i className="fa fa-exchange"></i>
-                                  </a>
-                                  <button type="button" className="hover-action quick-view-btn" title="Quick View" onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    openQuickView(product);
-                                  }}>
-                                    <i className="fa fa-eye"></i>
+                                  </div>
+                                ) : (
+                                  <button type="button" className="select-option-btn disabled-btn" disabled>
+                                    CURRENTLY UNAVAILABLE
                                   </button>
-                                </div>
-                                {active && selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId) && (
-                                  <div className="product-options-panel active">
-                                      <button type="button" className="product-options-close" onClick={closeProductOptions}>
-                                        ×
-                                      </button>
-                                      <div className="product-options-inner">
-                                        <label>Weight</label>
-                                        <select className="product-option-select" value={selectedWeight} onChange={(event) => handleWeightChange(productId, event .target .value)}>
-                                          <option value="">Select Weight</option>
-                                          <option value="250g">250g</option>
-                                          <option value="500g">500g</option>
-                                          <option value="1kg">1kg</option>
-                                        </select>
-                                        {selectedWeight && (
-                                          <div className="selected-option-price">
-                                            ₹{optionPrice.toLocaleString("en-IN",
-                                              {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                              }
-                                            )}
-                                          </div>
-                                        )}
-                                        {!selectedWeight && (<p className="weight-error">Please select a weight.</p> )}
-                                        <button type="button" className="weight-add-cart" onClick={() => addToCart(product)}>
-                                          <i className="fa fa-shopping-cart"></i>ADD TO CART
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
+                                )}
                               </div>
-                              <div className="premium-content">
-                                <h3 className="premium-title">{title}</h3>
-                                <div className="product-price">
-                                  {offerPrice > 0 && offerPrice < originalPrice && (
+                              <div className="product-hover-actions">
+                                <a href="#" className="hover-action compare-action" title="Add to Compare" onClick={compareClicked}>
+                                  <i className="fa fa-exchange"></i>
+                                </a>
+                                <button type="button" className="hover-action quick-view-btn" title="Quick View" onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  openQuickView(product);
+                                }}>
+                                  <i className="fa fa-eye"></i>
+                                </button>
+                                <button type="button" className={`hover-action wishlist-action ${isWishlist(productId) ? "wishlist-selected" : ""}`} title={
+                                  isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"
+                                } aria-label={isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"}onClick={(event) => wishlistClicked(product, event)}>
+                                  <i className={isWishlist(productId) ? "fa fa-heart" : "fa fa-heart-o"}></i>
+                                </button>
+                              </div>
+                              {active && optionsOpen && (
+                                <div className="product-options-panel active">
+                                  <button type="button" className="product-options-close" onClick={closeProductOptions} aria-label="Close weight options">
+                                    ×
+                                  </button>
+                                  <div className="product-options-inner">
+                                    <label>Weight</label>
+                                    <select className="product-option-select" value={selectedWeight} onChange={(event) => handleWeightChange(productId, event.target.value)}>
+                                      <option value="">Select Weight</option>
+                                      <option value="250g">250g</option>
+                                      <option value="500g">500g</option>
+                                      <option value="1kg">1kg</option>
+                                    </select>
+                                    {selectedWeight && (
+                                      <div className="selected-option-price">
+                                        ₹{optionPrice.toLocaleString("en-IN",
+                                          {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                          }
+                                        )}
+                                      </div>
+                                    )}
+                                    {!selectedWeight && (
+                                      <p className="weight-error">Please select a weight.</p>
+                                    )}
+                                    <button type="button" className="weight-add-cart" onClick={() => addToCart(product)}>
+                                      <i className="fa fa-shopping-cart"></i>ADD TO CART
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="premium-content">
+                              <h3 className="premium-title">
+                                {title}
+                              </h3>
+                              <div className="product-price">
+                                {offerPrice > 0 && offerPrice < originalPrice && (
                                     <span className="old-price">
                                       ₹{originalPrice.toLocaleString("en-IN")}
                                     </span>
-                                    )}
-                                  <span className="current-price">
-                                    ₹{getProductPrice(product).toLocaleString("en-IN")}
-                                  </span>
-                                </div>
+                                  )}
+                                <span className="current-price">₹{getProductPrice(product).toLocaleString("en-IN")}</span>
                               </div>
                             </div>
                           </div>
-                        );
-                      }
-                    )}
-                    </div>
-                    <button
-                      type="button"
-                      className="brand-carousel-arrow brand-carousel-next"
-                      onClick={() => scrollBrandProducts(brandKey, 1)}
-                      disabled={!arrows.canScrollNext}
-                      aria-label={`Next ${brandTitle} products`}
-                      title="Next products"
-                    >›</button>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <div className="no-product-msg">
-                    No Products Found
-                  </div>
-                )}
-              </div>
+                  <button type="button" className="brand-carousel-arrow brand-carousel-next" onClick={() =>
+                    scrollBrandProducts(brandKey, 1)
+                  } disabled={!arrows.canScrollNext} aria-label={`Next ${brandTitle} products`} title="Next products">
+                    ›
+                  </button>
+                </div>
+              ) : (
+                <div className="no-product-msg">
+                  No Products Found
+                </div>
+              )}
             </div>
-          );
-        }
-      )}
+          </div>
+        );
+      })}
       <div className={`quick-view-modal ${quickViewOpen ? "active" : "" }`} onClick={(event) => {
         if (event.target === event.currentTarget) {
           closeQuickView();
         }
       }}>
         <div className="quick-view-box">
-          <button type="button" className="quick-view-close" onClick={closeQuickView}>
+          <button type="button" className="quick-view-close" onClick={closeQuickView} aria-label="Close quick view">
             ×
           </button>
           {quickLoading ? (
@@ -675,23 +649,24 @@ export default function HomePage() {
           ) : quickProduct ? (
             <div className="quick-view-content">
               <div className="quick-view-image">
-                {getProductImage1(quickProduct) && (<img src={getProductImage1(quickProduct)} alt={getProductTitle(quickProduct)} />)}
+                {getProductImage1(quickProduct) && (
+                  <img src={getProductImage1(quickProduct)} alt={getProductTitle(quickProduct)} />
+                )}
               </div>
               <div className="quick-view-details">
                 <h2>{getProductTitle(quickProduct)}</h2>
                 <div className="quick-view-price">
-                  ₹{getQuickViewTotal().toLocaleString("en-IN",
-                    {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }
-                  )}
+                  ₹{getQuickViewTotal().toLocaleString("en-IN", {
+                    minimumFractionDigits: 2, maximumFractionDigits: 2,
+                  })}
                 </div>
                 <div className="quick-view-description">
                   {quickProduct.description || "Premium quality product from Crack n Crunch."}
                 </div>
                 <label className="quick-view-label">Weight</label>
-                <select className="quick-view-select" value={quickWeight} onChange={(event) => setQuickWeight(event.target.value)}>
+                <select className="quick-view-select" value={quickWeight} onChange={(event) =>
+                  setQuickWeight(event.target.value)
+                }>
                   <option value="">Select Weight</option>
                   <option value="250g">250g</option>
                   <option value="500g">500g</option>
@@ -699,11 +674,15 @@ export default function HomePage() {
                 </select>
                 <label className="quick-view-label">Quantity</label>
                 <div className="quick-quantity">
-                  <button type="button" onClick={() => changeQuickQuantity(-1)}>−</button>
+                  <button type="button" onClick={() => changeQuickQuantity(-1)} aria-label="Decrease quantity">
+                    −
+                  </button>
                   <span>{quickQuantity}</span>
-                  <button type="button" onClick={() => changeQuickQuantity(1)}>+</button>
+                  <button type="button" onClick={() => changeQuickQuantity(1)} aria-label="Increase quantity">
+                    +
+                  </button>
                 </div>
-                <button type="button" className="quick-add-cart" disabled={!isProductActive(quickProduct)}onClick={addQuickViewToCart}>
+                <button type="button" className="quick-add-cart" disabled={!isProductActive(quickProduct)} onClick={addQuickViewToCart}>
                   <i className="fa fa-shopping-cart"></i>
                   {isProductActive(quickProduct) ? "ADD TO CART" : "CURRENTLY UNAVAILABLE"}
                 </button>
@@ -715,8 +694,8 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      </div>   
-      <style jsx global>{`
+      </div>
+      <style>{`
         *, *::before, *::after {
           box-sizing: border-box;
         }
@@ -779,11 +758,11 @@ export default function HomePage() {
         .slider-btn:hover {
           background: #00bcd4;
         }
-        .prev-btn {
-          left: 20px;
+        .prev-btn { 
+          left: 20px; 
         }
-        .next-btn {
-          right: 20px;
+        .next-btn { 
+          right: 20px; 
         }
         .category-section {
           width: 100%;
@@ -922,7 +901,7 @@ export default function HomePage() {
           width: 100%;
           aspect-ratio: 1768 / 2160;
           overflow: hidden;
-          background: #ffffff;
+          background: #fff;
         }
         .image-wrapper > a {
           position: relative;
@@ -936,7 +915,7 @@ export default function HomePage() {
           height: 100%;
           object-fit: contain;
           object-position: center;
-          background: #ffffff;
+          background: #fff;
         }
         .premium-image {
           display: block;
@@ -970,11 +949,11 @@ export default function HomePage() {
           font-size: 12px;
           font-weight: 700;
         }
-        .sale {
-          background: #28a745;
+        .sale { 
+          background: #28a745; 
         }
-        .unavailable {
-          background: #dc3545;
+        .unavailable { 
+          background: #dc3545; 
         }
         .product-hover-actions {
           position: absolute;
@@ -1008,14 +987,11 @@ export default function HomePage() {
           box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
           transition: background 0.2s ease, color 0.2s ease;
         }
-        .hover-action i {
-          line-height: 1;
+        .hover-action i { 
+          line-height: 1; 
         }
-        .wishlist-action {
+        .wishlist-action, .wishlist-action i {
           background: #fff !important;
-          color: #000 !important;
-        }
-        .wishlist-action i {
           color: #000 !important;
         }
         .wishlist-action.wishlist-selected i {
@@ -1522,11 +1498,11 @@ export default function HomePage() {
             height: 34px;
             font-size: 16px;
           }
-          .prev-btn {
-            left: 8px;
+          .prev-btn { 
+            left: 8px; 
           }
-          .next-btn {
-            right: 8px;
+          .next-btn { 
+            right: 8px; 
           }
           .category-section, .premium-section {
             padding: 24px 14px;
@@ -1614,8 +1590,15 @@ export default function HomePage() {
           .product-hover-actions .wishlist-action i {
             color: #e53935 !important;
           }
-          .product-bottom-action, .product-options-panel {
+          .product-bottom-action {
             display: none !important;
+          }
+          .product-options-panel.active {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
+            z-index: 200 !important;
           }
           .image-wrapper .mobile-cart-action {
             position: absolute !important;
@@ -1640,6 +1623,10 @@ export default function HomePage() {
           }
           .image-wrapper .mobile-cart-action i {
             color: #111 !important;
+          }
+          .image-wrapper .mobile-cart-disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
           }
           .image-wrapper:hover .image1 {
             opacity: 1;
@@ -1786,8 +1773,6 @@ export default function HomePage() {
             display: none !important;
           }
         }
-
-        /* Brand product carousel: 5 products visible on desktop */
         .brand-carousel {
           position: relative;
           width: 100%;
@@ -1836,8 +1821,12 @@ export default function HomePage() {
           cursor: pointer;
           transition: opacity 0.2s ease, background 0.2s ease;
         }
-        .brand-carousel-prev { left: -12px; }
-        .brand-carousel-next { right: -12px; }
+        .brand-carousel-prev { 
+          left: -12px; 
+        }
+        .brand-carousel-next { 
+          right: -12px; 
+        }
         .brand-carousel-arrow:disabled {
           opacity: 0.28;
           cursor: not-allowed;
@@ -1848,13 +1837,19 @@ export default function HomePage() {
           color: #fff;
         }
         @media (min-width: 769px) and (max-width: 1024px) {
-          .premium-grid.brand-products-track { gap: 16px; }
+          .premium-grid.brand-products-track {
+            gap: 16px;
+          }
           .brand-products-track > .premium-column {
             flex-basis: calc((100% - 32px) / 3);
             width: calc((100% - 32px) / 3);
           }
-          .brand-carousel-prev { left: -8px; }
-          .brand-carousel-next { right: -8px; }
+          .brand-carousel-prev { 
+            left: -8px; 
+          }
+          .brand-carousel-next { 
+            right: -8px; 
+          }
         }
         @media (max-width: 768px) {
           .premium-grid.brand-products-track {
@@ -1871,9 +1866,14 @@ export default function HomePage() {
             height: 32px;
             font-size: 23px;
           }
-          .brand-carousel-prev { left: -5px; }
-          .brand-carousel-next { right: -5px; }
+          .brand-carousel-prev { 
+            left: -5px; 
+          }
+          .brand-carousel-next { 
+            right: -5px; 
+          }
         }
+
       `}</style>
     </>
   );

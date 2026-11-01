@@ -9,6 +9,7 @@ function ShopContent() {
   const [minPrice, setMinPrice] = useState(searchParams.get("min_price") || "30");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("max_price") || "2000");
   const [showCount, setShowCount] = useState(searchParams.get("show") || "9");
+  const [currentPage, setCurrentPage] = useState(1);
   const [sortValue, setSortValue] = useState(searchParams.get("sort") || "default");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openCategories, setOpenCategories] = useState({
@@ -431,7 +432,17 @@ function ShopContent() {
     }
     return array.slice(0, 5);
   }, [filteredProducts]);
-  const displayedProducts = useMemo(() => filteredProducts.slice(0, Number(showCount) || 9), [filteredProducts, showCount]);
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({top: 0, behavior: "smooth",});
+  };
+  const productsPerPage = Number(showCount) || 9;
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const displayedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * productsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + productsPerPage);
+  }, [filteredProducts, currentPage, productsPerPage]);
   const createQuery = (changes = {}) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(changes).forEach(([key, value]) => {
@@ -460,6 +471,7 @@ function ShopContent() {
   };
   const handleShowChange = (value) => {
     setShowCount(value);
+    setCurrentPage(1);
     router.push(`/shop?${createQuery({ show: value })}`);
   };
   const handleSortChange = (value) => {
@@ -849,6 +861,8 @@ function ShopContent() {
           height: 100%;
           display: block;
           object-fit: contain;
+          object-position: center;
+          background: #ffffff;
           transition: transform 0.3s ease;
         }
         .productImageSecond {
@@ -1299,6 +1313,16 @@ function ShopContent() {
             min-height: 46px;
             font-size: 14px;
           }
+          .shopPagination {
+            gap: 5px;
+            margin: 25px 0;
+          }
+          .paginationButton {
+            min-width: 34px;
+            height: 36px;
+            padding: 0 8px;
+            font-size: 12px;
+          }
         }
         .quickViewButton, .quickViewSecondaryButton {
           min-height: 40px;
@@ -1364,20 +1388,54 @@ function ShopContent() {
         .productImageBox {
           position: relative;
           width: 100%;
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 1768 / 2160;
           overflow: hidden;
+          background: #ffffff;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          isolation: isolate;
         }
         .productImage {
-          display: block;
           width: 100%;
           height: 100%;
+          display: block;
           object-fit: contain;
+          object-position: center;
+          background: #ffffff;
         }
         .productHoverActions {
           display: flex;
         }
         .productOptionsButton {
           display: flex;
+        }
+          .shopPagination {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin: 40px 0;
+        }
+        .paginationButton {
+          min-width: 40px;
+          height: 40px;
+          padding: 0 12px;
+          border: 1px solid #ddd;
+          background: #fff;
+          color: #222;
+          cursor: pointer;
+          font-size: 14px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+        .paginationButton:hover:not(:disabled), .paginationButton.active {
+          background: #222;
+          color: #fff;
+          border-color: #222;
+        }
+        .paginationButton:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
         }
         @media (hover: hover) and (pointer: fine) and (min-width: 1025px) {
           .productOptionsButton {
@@ -1995,126 +2053,122 @@ function ShopContent() {
             ) : displayedProducts.length === 0 ? (
               <div className="emptyProducts">No products found.</div>
             ) : (
-              <div className="productsGrid">
-                {displayedProducts.map((product, index) => {
-                  const image1 = getProductImage(product);
-                  const image2 = getProductSecondImage(product);
-                  const originalPrice = getOriginalPrice(product);
-                  const offerPrice = getOfferPrice(product);
-                  const productId = getProductId(product);
-                  const productIdString = productId ? String(productId) : "";
-                  const isWishlisted = wishlistIds.includes(productIdString);
-                  const isCompared = compareIds.includes(productIdString);
-                  const isCartPopupOpen = cartPopupProduct && String(getProductId(cartPopupProduct)) === String(productId);
-                  const statusTag = getProductStatusTag(product);
-                  return (
-                    <div className="productCard" key={productId || index} onClick={() => handleProductClick(product)}>
-                      <div className="productImageBox">
-                        {statusTag && (
-                          <span className={`productStatusTag ${statusTag === "SALE" ? "saleTag" : "unavailableTag"}`}>
-                            {statusTag}
-                          </span>
-                        )}
-                        <img src={image1} alt={getProductName(product)} className="productImage" onClick={(event) => {
-                            event.stopPropagation();
-                            handleProductClick(product);
-                          }}
-                          onError={(event) => {
-                            if (event.currentTarget.dataset.fallback) return;
-                            event.currentTarget.dataset.fallback = "true";
-                            event.currentTarget.src = "/uploads/no-image.png";
-                          }}
-                        />
-                        {image2 && (
-                          <img src={image2} alt={getProductName(product)} className="productImage productImageSecond"
-                            onClick={(event) => {
+              <>
+                <div className="productsGrid">
+                  {displayedProducts.map((product, index) => {
+                    const image1 = getProductImage(product);
+                    const image2 = getProductSecondImage(product);
+                    const originalPrice = getOriginalPrice(product);
+                    const offerPrice = getOfferPrice(product);
+                    const productId = getProductId(product);
+                    const productIdString = productId ? String(productId) : "";
+                    const isWishlisted = wishlistIds.includes(productIdString);
+                    const isCompared = compareIds.includes(productIdString);
+                    const isCartPopupOpen = cartPopupProduct && String(getProductId(cartPopupProduct)) === String(productId);
+                    const statusTag = getProductStatusTag(product);
+                    return (
+                      <div className="productCard" key={productId || index} onClick={() => handleProductClick(product)}>
+                        <div className="productImageBox">
+                          {statusTag && (<span className={`productStatusTag ${statusTag === "SALE" ? "saleTag" : "unavailableTag"}`} >{statusTag}</span>)}
+                          <img src={image1} alt={getProductName(product)} className="productImage" onClick={(event) => {
                               event.stopPropagation();
                               handleProductClick(product);
-                            }}
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
+                            }}onError={(event) => {
+                              if (event.currentTarget.dataset.fallback) return;
+                              event.currentTarget.dataset.fallback = "true";
+                              event.currentTarget.src = "/uploads/no-image.png";
                             }}
                           />
-                        )}
-                        {!isCartPopupOpen && (
-                          <div className="productHoverActions">
-                            <button type="button" className={`productHoverAction ${isCompared ? "active" : ""}`}
-                              onClick={(event) =>
-                                handleCompareClick(event, product)
-                              } aria-label={isCompared ? "Remove from compare" : "Add to compare"} title="Compare"
-                            >
-                              <i className="fa fa-exchange" />
-                            </button>
-                            <button type="button" className="productHoverAction" onClick={(event) =>
-                                openQuickView(event, product)
-                              } aria-label="Quick view" title="Quick view">
-                              <i className="fa fa-eye" />
-                            </button>
-                            <button type="button" className={`productHoverAction ${
-                              isWishlisted ? "active" : ""
-                            }`} onClick={(event) => handleWishlist(event, product)} aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"} title="Wishlist">
-                              <i className="fa fa-heart" />
-                            </button>
-                          </div>
-                        )}
-                        {!isCartPopupOpen && (
-                          <button type="button" className="productOptionsButton" onClick={(event) => openCartPopup(event, product)} aria-label="Select weight and add to cart" title="Select options">
-                            <i className="fa fa-shopping-cart" />
-                            <span className="cartButtonText">
-                              SELECT OPTIONS
-                            </span>
-                          </button>
-                        )}
-                        {isCartPopupOpen && cartPopupProduct && (
-                          <div className="productCartPopup" onClick={(event) => event.stopPropagation()}>
-                            <div className="productCartPopupInner">
-                              <button type="button" className="productCartPopupClose" onClick={closeCartPopup} aria-label="Close">×</button>
-                              <label className="productCartPopupLabel" htmlFor={`weight-${String(getProductId(cartPopupProduct))}`}>
-                                Select weight
-                              </label>
-                              <select id={`weight-${String(getProductId(cartPopupProduct))}`} className="productWeightSelect" value={selectedWeight} onChange={(event) =>
-                                setSelectedWeight(event.target.value)
-                              }>
-                                <option value="">Choose weight</option>
-                                {getWeightOptions(cartPopupProduct).map(
-                                  (option) => (<option key={option.label} value={option.label} >{option.label}</option>)
-                                )}
-                              </select>
-                              {selectedWeight && (
-                                <div className="productCartPopupPrice">
-                                  ₹{money(getSelectedWeightPrice(cartPopupProduct, selectedWeight))}
-                                </div>
-                              )}
-                              <button type="button" className="productAddCartButton" onClick={handleAddToCart} disabled={!selectedWeight}>
-                                ADD TO CART
+                          {image2 && (
+                            <img src={image2} alt={getProductName(product)} className="productImage productImageSecond" onClick={(event) => {
+                                event.stopPropagation();
+                                handleProductClick(product);
+                              }}onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                          {!isCartPopupOpen && (
+                            <div className="productHoverActions">
+                              <button type="button" className={`productHoverAction ${isCompared ? "active" : "" }`} onClick={(event) => handleCompareClick(event, product)} aria-label={isCompared ? "Remove from compare" : "Add to compare"} title="Compare">
+                                <i className="fa fa-exchange" />
+                              </button>
+                              <button type="button" className="productHoverAction" onClick={(event) => openQuickView(event, product)} aria-label="Quick view" title="Quick view">
+                                <i className="fa fa-eye" />
+                              </button>
+                              <button type="button" className={`productHoverAction ${isWishlisted ? "active" : ""}`} onClick={(event) => handleWishlist(event, product)} aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"} title="Wishlist">
+                                <i className="fa fa-heart" />
                               </button>
                             </div>
+                          )}
+                          {!isCartPopupOpen && (
+                            <button type="button" className="productOptionsButton" onClick={(event) => openCartPopup(event, product)} aria-label="Select weight and add to cart" title="Select options">
+                              <i className="fa fa-shopping-cart" />
+                              <span className="cartButtonText">SELECT OPTIONS</span>
+                            </button>
+                          )}
+                          {isCartPopupOpen && cartPopupProduct && (
+                            <div className="productCartPopup" onClick={(event) => event.stopPropagation()} >
+                              <div className="productCartPopupInner">
+                                <button type="button" className="productCartPopupClose" onClick={closeCartPopup} aria-label="Close" >
+                                  ×
+                                </button>
+                                <label className="productCartPopupLabel" htmlFor={`weight-${String(getProductId(cartPopupProduct))}`} >
+                                  Select weight
+                                </label>
+                                <select id={`weight-${String(getProductId(cartPopupProduct))}`} className="productWeightSelect" value={selectedWeight} onChange={(event) => setSelectedWeight(event.target.value)}>
+                                  <option value="">Choose weight</option>
+                                  {getWeightOptions(cartPopupProduct).map((option) => (
+                                    <option key={option.label} value={option.label}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                {selectedWeight && (
+                                  <div className="productCartPopupPrice">
+                                    ₹{money(getSelectedWeightPrice(cartPopupProduct, selectedWeight))}
+                                  </div>
+                                )}
+                                <button type="button" className="productAddCartButton" onClick={handleAddToCart} disabled={!selectedWeight}>
+                                  ADD TO CART
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="productCardName">
+                          {getProductName(product)}
+                        </div>
+                        {hasOffer(product) ? (
+                          <div className="productPrice">
+                            <span className="originalPrice">₹{money(originalPrice)}</span>
+                            <span className="offerPrice">₹{money(offerPrice)}</span>
+                          </div>
+                        ) : (
+                          <div className="productPrice">
+                            <span className="offerPrice">₹{money(getDisplayPrice(product))}</span>
                           </div>
                         )}
                       </div>
-                      <div className="productCardName">
-                        {getProductName(product)}
-                      </div>
-                      {hasOffer(product) ? (
-                        <div className="productPrice">
-                          <span className="originalPrice">
-                            ₹{money(originalPrice)}
-                          </span>
-                          <span className="offerPrice">
-                            ₹{money(offerPrice)}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="productPrice">
-                          <span className="offerPrice">
-                            ₹{money(getDisplayPrice(product))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                {totalPages > 1 && (
+                  <div className="shopPagination">
+                    <button type="button" className="paginationButton" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+                      Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, index) => (
+                      <button type="button" key={index + 1} className={`paginationButton ${currentPage === index + 1 ? "active" : ""}`} onClick={() => handlePageChange(index + 1)}>
+                        {index + 1}
+                      </button>
+                    ))}
+                    <button type="button" className="paginationButton" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </main>
         </div>
