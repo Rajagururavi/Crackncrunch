@@ -379,6 +379,111 @@ export default function Header() {
         <div className="close-btn" onClick={closeMobileMenu}>
           <i className="fa fa-times"></i>
         </div>
+        <form className="mobile-search-box" onSubmit={handleSearchSubmit}>
+    <div className="mobile-search-input">
+        <input
+            type="text"
+            value={searchQuery}
+            placeholder="Search Products..."
+            onChange={(e) => searchProducts(e.target.value)}
+            onFocus={() => {
+                if (searchQuery.trim()) {
+                    setSearchOpen(true);
+                }
+            }}
+        />
+
+        <button type="submit">
+            <i className="fa fa-search"></i>
+        </button>
+    </div>
+
+    {searchOpen && searchQuery.trim() && (
+        <div className="mobile-search-results">
+
+            {searchLoading && (
+                <div className="search-message">
+                    Searching...
+                </div>
+            )}
+
+            {!searchLoading && searchResults.length === 0 && (
+                <div className="search-message">
+                    No products found
+                </div>
+            )}
+
+            {!searchLoading && searchResults.map((product) => {
+                const originalPrice = getOriginalPrice(product);
+                const offerPrice = getOfferPrice(product);
+
+                const hasOffer =
+                    offerPrice > 0 &&
+                    originalPrice > 0 &&
+                    offerPrice < originalPrice;
+
+                return (
+                    <Link
+                        key={product._id}
+                        href={`/shop?search=${encodeURIComponent(searchQuery)}`}
+                        className="search-product"
+                        onClick={() => {
+                            setSearchOpen(false);
+                            setSearchQuery("");
+                            closeMobileMenu();
+                        }}
+                    >
+                        <div className="search-product-image">
+                            {getProductImage(product) && (
+                                <img
+                                    src={getProductImage(product)}
+                                    alt={product.productName || "Product"}
+                                />
+                            )}
+                        </div>
+
+                        <div className="search-product-info">
+                            <div className="search-product-name">
+                                {product.productName || "Product"}
+                            </div>
+
+                            <div className="search-product-price">
+                                {hasOffer ? (
+                                    <>
+                                        <span className="old-price">
+                                            ₹{originalPrice.toFixed(2)}
+                                        </span>
+                                        <span className="offer-price">
+                                            ₹{offerPrice.toFixed(2)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="offer-price">
+                                        ₹{(offerPrice || originalPrice || 0).toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </Link>
+                );
+            })}
+
+            {!searchLoading && searchResults.length > 0 && (
+                <Link
+                    href={`/shop?search=${encodeURIComponent(searchQuery)}`}
+                    className="view-all-search"
+                    onClick={() => {
+                        setSearchOpen(false);
+                        setSearchQuery("");
+                        closeMobileMenu();
+                    }}
+                >
+                    View all results →
+                </Link>
+            )}
+        </div>
+    )}
+</form>
         <div className="mobile-links">
           <Link href="/" onClick={closeMobileMenu}>HOME </Link>
           <Link href="/about" onClick={closeMobileMenu}>ABOUTUS</Link>
@@ -1328,6 +1433,49 @@ export default function Header() {
           color: #777;
           line-height: 24px;
         }
+        .mobile-search-input {
+          display: flex;
+          width: 100%;
+          height: 45px;
+          position: relative;
+          background: #fff;
+          border-radius: 25px;
+        }
+        .mobile-search-input input {
+          width: 100%;
+          min-width: 0;
+          padding: 0 45px 0 15px;
+          border: none;
+          outline: none;
+          font-size: 14px;
+          color: #222;
+          background: #fff;
+        }
+        .mobile-search-input button {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 45px;
+          height: 45px;
+          border: none;
+          background: #fff;
+          color: #222;
+          font-size: 17px;
+          cursor: pointer;
+        }
+        .mobile-search-results {
+          position: absolute;
+          top: 50px;
+          left: 0;
+          width: 100%;
+          max-height: 350px;
+          overflow-y: auto;
+          background: #fff;
+          border-radius: 8px;
+          border: 1px solid #eee;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+          z-index: 1000000;
+        }
         @media screen and (max-width: 1100px) {
           .nav-container {
             max-width: 100%;
@@ -1354,6 +1502,13 @@ export default function Header() {
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
+          }
+          .mobile-search-box {
+            display: block;
+            width: 100%;
+            position: relative;
+            margin-bottom: 20px;
+            z-index: 1000000;
           }
           .top-navbar {
             height: 42px;
@@ -1403,16 +1558,51 @@ export default function Header() {
             justify-content: space-between;
           }
           .logo {
-            flex: 1;
-            min-width: 0;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
             display: flex;
             align-items: center;
+            justify-content: center;
           }
           .logo img {
             width: 105px;
             height: 60px;
-            margin-left: 150px;
+            margin-left: 0px;
             object-fit: contain;
+          }
+          .mobile-search-box {
+            display: flex;
+            width: 100%;
+            height: 45px;
+            margin-bottom: 20px;
+            position: relative;
+            background: #fff;
+            border-radius: 25px;
+            overflow: hidden;
+          }
+          .mobile-search-box input {
+            width: 100%;
+            min-width: 0;
+            padding: 0 45px 0 15px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            color: #222;
+            background: #fff;
+          }
+          .mobile-search-box button {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 45px;
+            height: 45px;
+            border: none;
+            background: #fff;
+            color: #222;
+            font-size: 17px;
+            cursor: pointer;
           }
           .menu {
             display: none !important;
@@ -1428,19 +1618,24 @@ export default function Header() {
             flex-shrink: 0;
           }
           .user-btn {
-            width: 34px;
-            height: 34px;
-            padding: 0;
+            width: auto;
+            min-width: 50px;
+            max-width: 200px;
+            min-height: 34px;
+            padding: 0 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #fff;
-            border-radius: 50%;
-            font-size: 0;
+            gap: 6px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
           .user-btn i {
-            font-size: 15px;
-            color: #111;
+            font-size: 14px;
+            flex-shrink: 0;
           }
           .cart {
             display: flex;

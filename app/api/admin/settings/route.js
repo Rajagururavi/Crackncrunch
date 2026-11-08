@@ -3,13 +3,10 @@ import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 import fs from "fs/promises";
 import path from "path";
-
 export async function GET() {
   try {
     const { getSession } = await import("@/lib/session");
-
     const session = await getSession();
-
     if (!session.isLoggedIn || !session.adminId) {
       return Response.json(
         {
@@ -19,14 +16,9 @@ export async function GET() {
         { status: 401 }
       );
     }
-
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-
-    const admin = await db.collection("admins").findOne({
-      _id: new ObjectId(session.adminId),
-    });
-
+    const admin = await db.collection("admins").findOne({_id: new ObjectId(session.adminId),});
     if (!admin) {
       return Response.json(
         {
@@ -36,22 +28,14 @@ export async function GET() {
         { status: 404 }
       );
     }
-
     return Response.json({
       success: true,
       settings: {
-        phone: admin.phone || "",
-        gst: admin.gst || "",
-        fssai: admin.fssai || "",
-        address: admin.address || "",
-        username: admin.username || "",
-        email: admin.email || "",
-        logo: admin.logo || "",
+        phone: admin.phone || "", gst: admin.gst || "", fssai: admin.fssai || "", address: admin.address || "", username: admin.username || "", email: admin.email || "", logo: admin.logo || "",
       },
     });
   } catch (error) {
     console.error("GET SETTINGS ERROR:", error);
-
     return Response.json(
       {
         success: false,
@@ -61,13 +45,10 @@ export async function GET() {
     );
   }
 }
-
 export async function PUT(request) {
   try {
     const { getSession } = await import("@/lib/session");
-
     const session = await getSession();
-
     if (!session.isLoggedIn || !session.adminId) {
       return Response.json(
         {
@@ -77,9 +58,7 @@ export async function PUT(request) {
         { status: 401 }
       );
     }
-
     const formData = await request.formData();
-
     const phone = formData.get("phone") || "";
     const gst = formData.get("gst") || "";
     const fssai = formData.get("fssai") || "";
@@ -88,14 +67,9 @@ export async function PUT(request) {
     const email = formData.get("email") || "";
     const password = formData.get("password") || "";
     const logoFile = formData.get("logo");
-
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-
-    const admin = await db.collection("admins").findOne({
-      _id: new ObjectId(session.adminId),
-    });
-
+    const admin = await db.collection("admins").findOne({_id: new ObjectId(session.adminId),});
     if (!admin) {
       return Response.json(
         {
@@ -105,81 +79,25 @@ export async function PUT(request) {
         { status: 404 }
       );
     }
-
     const updateData = {
-      phone,
-      gst,
-      fssai,
-      address,
-      username: username || admin.username,
-      email,
-      updatedAt: new Date(),
+      phone, gst, fssai, address, username: username || admin.username, email, updatedAt: new Date(),
     };
-
-    /*
-     * LOGO UPLOAD
-     */
-    if (
-      logoFile &&
-      typeof logoFile !== "string" &&
-      logoFile.size > 0
-    ) {
-      const uploadDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads"
-      );
-
+    if (logoFile && typeof logoFile !== "string" && logoFile.size > 0) {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
       await fs.mkdir(uploadDir, {
         recursive: true,
       });
-
-      const originalName =
-        logoFile.name || "logo";
-
-      const extension =
-        path.extname(originalName) || ".png";
-
-      const fileName =
-        "logo-" +
-        Date.now() +
-        extension;
-
-      const filePath = path.join(
-        uploadDir,
-        fileName
-      );
-
-      const buffer = Buffer.from(
-        await logoFile.arrayBuffer()
-      );
-
-      await fs.writeFile(
-        filePath,
-        buffer
-      );
-
-      updateData.logo =
-        "/uploads/" + fileName;
+      const originalName = logoFile.name || "logo";
+      const extension = path.extname(originalName) || ".png";
+      const fileName = "logo-" + Date.now() + extension;
+      const filePath = path.join(uploadDir, fileName);
+      const buffer = Buffer.from(await logoFile.arrayBuffer());
+      await fs.writeFile(filePath, buffer);
+      updateData.logo = "/uploads/" + fileName;
     }
-
-    /*
-     * PASSWORD
-     */
-    if (
-      password &&
-      password.trim() !== ""
-    ) {
-      updateData.password =
-        await bcrypt.hash(
-          password,
-          10
-        );
+    if (password && password.trim() !== "") {
+      updateData.password = await bcrypt.hash(password, 10);
     }
-
-    /*
-     * UPDATE ADMIN
-     */
     await db.collection("admins").updateOne(
       {
         _id: admin._id,
@@ -188,33 +106,19 @@ export async function PUT(request) {
         $set: updateData,
       }
     );
-
-    session.username =
-      updateData.username;
-
+    session.username = updateData.username;
     await session.save();
-
     return Response.json({
       success: true,
-      message:
-        "Settings saved successfully!",
-      logo:
-        updateData.logo ||
-        admin.logo ||
-        "",
+      message: "Settings saved successfully!",
+      logo: updateData.logo || admin.logo || "",
     });
   } catch (error) {
-    console.error(
-      "UPDATE SETTINGS ERROR:",
-      error
-    );
-
+    console.error("UPDATE SETTINGS ERROR:", error);
     return Response.json(
       {
         success: false,
-        message:
-          "Failed to save settings",
-        error: error.message,
+        message: "Failed to save settings", error: error.message,
       },
       { status: 500 }
     );

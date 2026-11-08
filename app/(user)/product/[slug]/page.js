@@ -68,7 +68,11 @@ export default function ProductPage() {
         }
         const data = await response.json();
         const products = Array.isArray(data) ? data : Array.isArray(data.products) ? data.products : [];
-        const productData = products.find((item) => createSlug(item.productName) === slug);
+        const productData = products.find((item) => {
+          const itemId = String(item._id || item.id || item.productId || item.product_id || "");
+          const itemName = item.productName || item.name || item.product_name || "";
+          return itemId === slug || createSlug(itemName) === slug;
+        });
         if (!productData) {
           throw new Error("Product not found");
         }

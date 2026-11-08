@@ -19,8 +19,24 @@ export default function HomePage() {
   const [selectedOptionsProduct, setSelectedOptionsProduct] = useState(null);
   const [selectedWeights, setSelectedWeights] = useState({});
   const [wishlistIds, setWishlistIds] = useState([]);
+  const [wishlistBusyIds, setWishlistBusyIds] = useState([]);
   const brandTrackRefs = useRef({});
   const [brandScrollState, setBrandScrollState] = useState({});
+  const getLoggedInUser = () => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      if (!savedUser) return null;
+      const user = JSON.parse(savedUser);
+      if (!user?.logged_in) return null;
+      return user;
+    } catch (error) {
+      console.error("User data error:", error);
+      return null;
+    }
+  };
+  const getUserId = (user) => {
+    return (user?._id || user?.id || user?.userId || user?.user_id || "");
+  };
   const updateBrandScrollState = (brandKey) => {
     const element = brandTrackRefs.current[brandKey];
     if (!element) return;
@@ -33,17 +49,16 @@ export default function HomePage() {
       }
       return {
         ...previous,
-        [brandKey]: {canScrollPrev, canScrollNext,},
+        [brandKey]: {
+          canScrollPrev, canScrollNext,
+        },
       };
     });
   };
   const scrollBrandProducts = (brandKey, direction) => {
     const element = brandTrackRefs.current[brandKey];
     if (!element) return;
-    element.scrollBy({
-      left: direction * element.clientWidth,
-      behavior: "smooth",
-    });
+    element.scrollBy({left: direction * element.clientWidth, behavior: "smooth",});
     window.requestAnimationFrame(() => {
       updateBrandScrollState(brandKey);
     });
@@ -97,9 +112,48 @@ export default function HomePage() {
     };
   }, []);
   useEffect(() => {
+    let cancelled = false;
+    const loadWishlist = async () => {
+      try {
+        const user = getLoggedInUser();
+        if (!user) {
+          setWishlistIds([]);
+          return;
+        }
+        const userId = getUserId(user);
+        if (!userId) {
+          console.error("User ID missing:", user);
+          return;
+        }
+        const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(String(userId))}`,
+          {
+            cache: "no-store",
+          }
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data?.message || "Failed to load wishlist"
+          );
+        }
+        if (cancelled) return;
+        const wishlist = Array.isArray(data.wishlist) ? data.wishlist : [];
+        setWishlistIds(wishlist.map((item) => String(item.productId)));
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Load Wishlist Error:", error);
+        }
+      }
+    };
+    loadWishlist();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
     if (BANNERS.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => prev >= BANNERS.length - 1 ? 0 : prev + 1);
+      setCurrentSlide((prev) =>prev >= BANNERS.length - 1 ? 0 : prev + 1);
     }, 5000);
     return () => clearInterval(timer);
   }, []);
@@ -126,7 +180,7 @@ export default function HomePage() {
   };
   const getProductSlug = (product) => {
     const productName = product?.productName || product?.product_name || product?.product_title || product?.name || product?.title || "";
-    return String(productName) .toLowerCase() .trim() .replace(/[^a-z0-9]+/g, "-") .replace(/^-+|-+$/g, "");
+    return String(productName).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   };
   const getProductTitle = (product) => {
     return (product?.productName || product?.product_name || product?.product_title || product?.name || product?.title || "");
@@ -168,7 +222,7 @@ export default function HomePage() {
     return 1;
   };
   const getWeightPrice = (product, weight) => {
-    return getProductPrice(product) * getWeightMultiplier(weight);
+    return (getProductPrice(product) * getWeightMultiplier(weight));
   };
   const openProductOptions = (product, event) => {
     event.preventDefault();
@@ -229,9 +283,7 @@ export default function HomePage() {
       final_price: price,
     };
     const cart = getSavedCart();
-    const existingIndex = cart.findIndex(
-      (item) => String(item.product_id) === String(productId) && item.weight === weight
-    );
+    const existingIndex = cart.findIndex((item) => String(item.product_id) === String(productId) && item.weight === weight);
     if (existingIndex !== -1) {
       cart[existingIndex].quantity = Number(cart[existingIndex].quantity || 0) + 1;
       cart[existingIndex].final_price = price * Number(cart[existingIndex].quantity);
@@ -251,7 +303,9 @@ export default function HomePage() {
       if (!productId) {
         throw new Error("Product ID is missing");
       }
-      const response = await fetch("/api/products", {cache: "no-store",});
+      const response = await fetch("/api/products", {
+        cache: "no-store",
+      });
       if (!response.ok) {
         throw new Error(`Products API failed: ${response.status}`);
       }
@@ -320,60 +374,53 @@ export default function HomePage() {
     event.preventDefault();
     event.stopPropagation();
     const productId = String(getProductId(product));
-    let savedUser;
-    try {
-      savedUser = localStorage.getItem("user");
-    } catch {
+    if (!productId) {
+      alert("Product ID not found.");
+      return;
+    }
+    const user = getLoggedInUser();
+    if (!user) {
       alert("Please login to add products to wishlist.");
       return;
     }
-    if (!savedUser) {
-      alert("Please login to add products to wishlist.");
+    const userId = getUserId(user);
+    if (!userId) {
+      console.error("User ID missing. Login user data:", user);
+      alert("User ID not found. Please login again.");
       return;
     }
-    let user;
-    try {
-      user = JSON.parse(savedUser);
-    } catch {
-      alert("Please login again.");
+    if (wishlistBusyIds.includes(productId)) {
       return;
     }
-    if (!user?.logged_in) {
-      alert("Please login to add products to wishlist.");
-      return;
-    }
-    if (wishlistIds.includes(productId)) {
-      setWishlistIds((prev) => prev.filter((id) => id !== productId));
-      try {
-        const response = await fetch("/api/wishlist", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ productId }),
-        });
-        if (!response.ok) {
-          console.error("Wishlist remove failed:", response.status);
-        }
-      } catch (error) {
-        console.error("Wishlist remove error:", error);
-      }
-      return;
-    }
-    setWishlistIds((prev) => [...prev, productId]);
+    const alreadyWishlisted = wishlistIds.includes(productId);
+    setWishlistBusyIds((prev) => [...prev, productId]);
     try {
       const response = await fetch("/api/wishlist", {
-        method: "POST",
+        method: alreadyWishlisted ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({
+          userId: String(userId),
+          productId: productId,
+        }),
       });
+      const data = await response.json();
       if (!response.ok) {
-        console.error("Wishlist add failed:", response.status);
+        console.error("Wishlist API Error:", data);
+        alert(data?.message || "Wishlist update failed.");
+        return;
+      }
+      if (alreadyWishlisted) {
+        setWishlistIds((prev) => prev.filter((id) => id !== productId));
+      } else {
+        setWishlistIds((prev) => prev.includes(productId) ? prev : [...prev, productId]);
       }
     } catch (error) {
-      console.error("Wishlist add error:", error);
+      console.error("Wishlist Error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setWishlistBusyIds((prev) => prev.filter((id) => id !== productId));
     }
   };
   const compareClicked = (event) => {
@@ -393,19 +440,17 @@ export default function HomePage() {
   return (
     <>
       <div className="hero-banner">
-        <div className="banner-slider" style={{
-          transform: `translateX(-${currentSlide * 100}%)`,
-        }}>
+        <div className="banner-slider"
+          style={{
+            transform: `translateX(-${currentSlide * 100}%)`,
+          }}
+        >
           {BANNERS.map((banner, index) => (
             <img key={banner} src={banner} alt={`Banner ${index + 1}`} />
           ))}
         </div>
-        <button className="slider-btn prev-btn" type="button" onClick={prevSlide} aria-label="Previous banner">
-          ❮
-        </button>
-        <button className="slider-btn next-btn" type="button" onClick={nextSlide} aria-label="Next banner">
-          ❯
-        </button>
+        <button className="slider-btn prev-btn" type="button" onClick={prevSlide} aria-label="Previous banner"> ❮ </button>
+        <button className="slider-btn next-btn" type="button" onClick={nextSlide} aria-label="Next banner"> ❯ </button>
       </div>
       <div className="category-section">
         <h1 className="section-title">Our Categories</h1>
@@ -425,13 +470,11 @@ export default function HomePage() {
                       {image && (
                         <img src={image} className="category-img" alt={title} onError={(event) => {
                           event.currentTarget.style.display = "none";
-                        }}/>
+                        }} />
                       )}
                     </Link>
                     <div className="category-content">
-                      <h3 className="category-title">
-                        {title}
-                      </h3>
+                      <h3 className="category-title">{title}</h3>
                     </div>
                   </div>
                 </div>
@@ -450,8 +493,7 @@ export default function HomePage() {
         const products = Array.isArray(brand?.products) ? brand.products : [];
         const brandKey = String(brand?._id || brand?.id || brandIndex);
         const arrows = brandScrollState[brandKey] || {
-          canScrollPrev: false,
-          canScrollNext: products.length > 5,
+          canScrollPrev: false, canScrollNext: products.length > 5,
         };
         return (
           <div key={brandKey}>
@@ -459,14 +501,12 @@ export default function HomePage() {
               <div className="nutrition-banner">
                 <img src={brandImage} alt={brandTitle} onError={(event) => {
                   event.currentTarget.style.display = "none";
-                }}/>
+                }} />
               </div>
             )}
             <div className="premium-section">
               <div className="premium-header">
-                <h2 className="premium-main-title">
-                  {brandTitle}
-                </h2>
+                <h2 className="premium-main-title">{brandTitle}</h2>
                 <Link href={`/shop?brand=${encodeURIComponent(brandTitle)}`} className="premium-view-btn">
                   View All
                 </Link>
@@ -478,13 +518,14 @@ export default function HomePage() {
                   } disabled={!arrows.canScrollPrev} aria-label={`Previous ${brandTitle} products`} title="Previous products">
                     ‹
                   </button>
-                  <div className="premium-grid brand-products-track" ref={(element) => {
-                    if (element) {
-                      brandTrackRefs.current[brandKey] = element;
-                    } else {
-                      delete brandTrackRefs.current[brandKey];
-                    }
-                  }} onScroll={() => updateBrandScrollState(brandKey)}>
+                  <div className="premium-grid brand-products-track"
+                    ref={(element) => {
+                      if (element) {
+                        brandTrackRefs.current[brandKey] = element;
+                      } else {
+                        delete brandTrackRefs.current[brandKey];
+                      }
+                    }} onScroll={() => updateBrandScrollState(brandKey)} >
                     {products.map((product, productIndex) => {
                       const productId = getProductId(product);
                       const title = getProductTitle(product);
@@ -497,7 +538,7 @@ export default function HomePage() {
                       const optionPrice = selectedWeight ? getWeightPrice(product, selectedWeight) : getProductPrice(product);
                       const optionsOpen = selectedOptionsProduct && String(getProductId(selectedOptionsProduct)) === String(productId);
                       return (
-                        <div className="premium-column" key={productId || productIndex}>
+                        <div className="premium-column" key={productId || productIndex} >
                           <div className="premium-card">
                             <div className="image-wrapper">
                               {active ? (
@@ -505,26 +546,28 @@ export default function HomePage() {
                               ) : (
                                 <span className="sale-badge unavailable">CURRENTLY UNAVAILABLE</span>
                               )}
-                              <Link href={`/product/${encodeURIComponent(getProductSlug(product))}`} className="product-image-link" onClick={(event) => {
-                                if (!getProductSlug(product)) {
-                                  event.preventDefault();
-                                }
-                              }}>
+                              <Link href={`/product/${encodeURIComponent(getProductSlug(product))}`}
+                                className="product-image-link" onClick={(event) => {
+                                  if (!getProductSlug(product)) {
+                                    event.preventDefault();
+                                  }
+                                }}
+                              >
                                 {image1 && (
                                   <img src={image1} className="premium-image image1" alt={title || "Product image"} onError={(event) => {
                                     event.currentTarget.style.display = "none";
-                                  }}/>
+                                  }} />
                                 )}
                                 {image2 && image2 !== image1 && (
                                   <img src={image2} className="premium-image image2" alt={title || "Product image"} onError={(event) => {
                                     event.currentTarget.style.display = "none";
-                                  }}/>
+                                  }} />
                                 )}
                               </Link>
                               {active ? (
                                 <button type="button" className="mobile-cart-action" title="Select weight and add to cart" aria-label="Select weight and add to cart" onClick={(event) =>
                                   openProductOptions(product, event)
-                                }>
+                                } >
                                   <i className="fa fa-shopping-cart"></i>
                                 </button>
                               ) : (
@@ -538,9 +581,7 @@ export default function HomePage() {
                                     <span className={optionsOpen ? "option-text option-hidden" : "option-text"}>
                                       SELECT OPTIONS
                                     </span>
-                                    <button type="button" className="option-cart" onClick={(event) =>
-                                      openProductOptions(product, event)
-                                    }>
+                                    <button type="button" className="option-cart" onClick={(event) => openProductOptions(product, event)}>
                                       <i className="fa fa-shopping-cart"></i>
                                     </button>
                                   </div>
@@ -561,10 +602,14 @@ export default function HomePage() {
                                 }}>
                                   <i className="fa fa-eye"></i>
                                 </button>
-                                <button type="button" className={`hover-action wishlist-action ${isWishlist(productId) ? "wishlist-selected" : ""}`} title={
-                                  isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"
-                                } aria-label={isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"}onClick={(event) => wishlistClicked(product, event)}>
-                                  <i className={isWishlist(productId) ? "fa fa-heart" : "fa fa-heart-o"}></i>
+                                <button type="button" className={`hover-action wishlist-action ${isWishlist(productId) ? "wishlist-selected" : ""}`} title={isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                  aria-label={
+                                    isWishlist(productId) ? "Remove from Wishlist" : "Add to Wishlist"
+                                  } disabled={wishlistBusyIds.includes(String(productId))} onClick={(event) => wishlistClicked(product, event)}
+                                >
+                                  <span className="wishlist-heart">
+                                    {isWishlist(productId) ? "♥" : "♡"}
+                                  </span>
                                 </button>
                               </div>
                               {active && optionsOpen && (
@@ -574,7 +619,9 @@ export default function HomePage() {
                                   </button>
                                   <div className="product-options-inner">
                                     <label>Weight</label>
-                                    <select className="product-option-select" value={selectedWeight} onChange={(event) => handleWeightChange(productId, event.target.value)}>
+                                    <select className="product-option-select" value={selectedWeight} onChange={(event) =>
+                                      handleWeightChange(productId, event.target.value)
+                                    }>
                                       <option value="">Select Weight</option>
                                       <option value="250g">250g</option>
                                       <option value="500g">500g</option>
@@ -591,7 +638,9 @@ export default function HomePage() {
                                       </div>
                                     )}
                                     {!selectedWeight && (
-                                      <p className="weight-error">Please select a weight.</p>
+                                      <p className="weight-error">
+                                        Please select a weight.
+                                      </p>
                                     )}
                                     <button type="button" className="weight-add-cart" onClick={() => addToCart(product)}>
                                       <i className="fa fa-shopping-cart"></i>ADD TO CART
@@ -601,16 +650,16 @@ export default function HomePage() {
                               )}
                             </div>
                             <div className="premium-content">
-                              <h3 className="premium-title">
-                                {title}
-                              </h3>
+                              <h3 className="premium-title">{title}</h3>
                               <div className="product-price">
                                 {offerPrice > 0 && offerPrice < originalPrice && (
-                                    <span className="old-price">
-                                      ₹{originalPrice.toLocaleString("en-IN")}
-                                    </span>
-                                  )}
-                                <span className="current-price">₹{getProductPrice(product).toLocaleString("en-IN")}</span>
+                                  <span className="old-price">
+                                    ₹{originalPrice.toLocaleString("en-IN")}
+                                  </span>
+                                )}
+                                <span className="current-price">
+                                  ₹{getProductPrice(product).toLocaleString("en-IN")}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -618,9 +667,7 @@ export default function HomePage() {
                       );
                     })}
                   </div>
-                  <button type="button" className="brand-carousel-arrow brand-carousel-next" onClick={() =>
-                    scrollBrandProducts(brandKey, 1)
-                  } disabled={!arrows.canScrollNext} aria-label={`Next ${brandTitle} products`} title="Next products">
+                  <button type="button" className="brand-carousel-arrow brand-carousel-next" onClick={() => scrollBrandProducts(brandKey, 1)} disabled={!arrows.canScrollNext} aria-label={`Next ${brandTitle} products`} title="Next products">
                     ›
                   </button>
                 </div>
@@ -634,10 +681,10 @@ export default function HomePage() {
         );
       })}
       <div className={`quick-view-modal ${quickViewOpen ? "active" : "" }`} onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          closeQuickView();
-        }
-      }}>
+          if (event.target === event.currentTarget) {
+            closeQuickView();
+          }
+        }}>
         <div className="quick-view-box">
           <button type="button" className="quick-view-close" onClick={closeQuickView} aria-label="Close quick view">
             ×
@@ -649,30 +696,31 @@ export default function HomePage() {
           ) : quickProduct ? (
             <div className="quick-view-content">
               <div className="quick-view-image">
-                {getProductImage1(quickProduct) && (
-                  <img src={getProductImage1(quickProduct)} alt={getProductTitle(quickProduct)} />
-                )}
+                {getProductImage1(quickProduct) && (<img src={getProductImage1(quickProduct)} alt={getProductTitle(quickProduct)}/>)}
               </div>
               <div className="quick-view-details">
                 <h2>{getProductTitle(quickProduct)}</h2>
                 <div className="quick-view-price">
-                  ₹{getQuickViewTotal().toLocaleString("en-IN", {
-                    minimumFractionDigits: 2, maximumFractionDigits: 2,
-                  })}
+                  ₹{getQuickViewTotal().toLocaleString("en-IN",
+                    {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }
+                  )}
                 </div>
                 <div className="quick-view-description">
                   {quickProduct.description || "Premium quality product from Crack n Crunch."}
                 </div>
                 <label className="quick-view-label">Weight</label>
-                <select className="quick-view-select" value={quickWeight} onChange={(event) =>
-                  setQuickWeight(event.target.value)
-                }>
+                <select className="quick-view-select" value={quickWeight} onChange={(event) => setQuickWeight(event.target.value)}>
                   <option value="">Select Weight</option>
                   <option value="250g">250g</option>
                   <option value="500g">500g</option>
                   <option value="1kg">1kg</option>
                 </select>
-                <label className="quick-view-label">Quantity</label>
+                <label className="quick-view-label">
+                  Quantity
+                </label>
                 <div className="quick-quantity">
                   <button type="button" onClick={() => changeQuickQuantity(-1)} aria-label="Decrease quantity">
                     −
@@ -683,8 +731,7 @@ export default function HomePage() {
                   </button>
                 </div>
                 <button type="button" className="quick-add-cart" disabled={!isProductActive(quickProduct)} onClick={addQuickViewToCart}>
-                  <i className="fa fa-shopping-cart"></i>
-                  {isProductActive(quickProduct) ? "ADD TO CART" : "CURRENTLY UNAVAILABLE"}
+                    <i className="fa fa-shopping-cart"></i> {isProductActive(quickProduct) ? "ADD TO CART" : "CURRENTLY UNAVAILABLE"}
                 </button>
               </div>
             </div>
@@ -990,15 +1037,29 @@ export default function HomePage() {
         .hover-action i { 
           line-height: 1; 
         }
-        .wishlist-action, .wishlist-action i {
+        .product-hover-actions .wishlist-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
           background: #fff !important;
-          color: #000 !important;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
         }
-        .wishlist-action.wishlist-selected i {
-          color: #e53935 !important;
+        .product-hover-actions .wishlist-heart {
+          display: block;
+          font-family: Arial, sans-serif;
+          font-size: 27px;
+          line-height: 1;
+          color: #222;
         }
-        .wishlist-action:hover i {
-          color: #e53935 !important;
+        .product-hover-actions .wishlist-selected .wishlist-heart {
+          color: #e53935;
+        }
+        .product-hover-actions .wishlist-action:hover .wishlist-heart {
+          color: #e53935;
         }
         .hover-action::after {
           content: attr(title);
@@ -1486,12 +1547,13 @@ export default function HomePage() {
             align-items: flex-start;
           }
           .banner-slider img {
-            width: 100% !important;
+            display: block;
+            flex: 0 0 100%;
+            width: 100%;
             min-width: 100%;
-            height: auto !important;
-            min-height: 0 !important;
-            object-fit: contain !important;
-            object-position: center center !important;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
           }
           .slider-btn {
             width: 34px;
@@ -1588,6 +1650,9 @@ export default function HomePage() {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
           }
           .product-hover-actions .wishlist-action i {
+            color: #222 !important;
+          }
+          .product-hover-actions .wishlist-selected .wishlist-heart {
             color: #e53935 !important;
           }
           .product-bottom-action {
@@ -1873,7 +1938,6 @@ export default function HomePage() {
             right: -5px; 
           }
         }
-
       `}</style>
     </>
   );
