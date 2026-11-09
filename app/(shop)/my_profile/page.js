@@ -213,7 +213,7 @@ export default function MyProfilePage() {
                                 <i className="fa fa-user" />
                                 <span>My Profile</span>
                             </Link>
-                            <Link href="/my_orders" onClick={closeMobileMenu}>
+                            <Link href="/my-orders" onClick={closeMobileMenu}>
                                 <i className="fa fa-shopping-bag" />
                                 <span>My Orders</span>
                             </Link>
