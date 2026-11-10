@@ -167,6 +167,7 @@ export async function POST(request) {
     const orderData = {
       receipt: receipt || "", orderDate: orderDate || new Date().toISOString(),
       customer: {
+        id: String(customer.id || customer._id || customer.userId || customer.user_id || ""),
         fullname: String(customer.fullname || ""),
         mobile: String(customer.mobile || ""),
         email: String(customer.email || ""),
@@ -175,8 +176,7 @@ export async function POST(request) {
         pincode: String(customer.pincode || ""),
         country: String(customer.country || "India"),
       },
-      items,
-      summary: {
+      items, summary: {
         subtotal: Number(summary?.subtotal || 0),
         shipping: Number(summary?.shipping || 0),
         total: Number(paymentData.amount) / 100,

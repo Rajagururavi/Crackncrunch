@@ -255,7 +255,7 @@ export default function MyOrdersPage() {
                       <tr>
                         <th>S.No</th>
                         <th>Image</th>
-                        <th>Product Name</th>
+                        <th>Order ID</th>
                         <th>Weight</th>
                         <th>Qty</th>
                         <th>Subtotal</th>
@@ -308,12 +308,9 @@ export default function MyOrdersPage() {
                               <td>
                                 <div className="product-info">
                                   <strong>
-                                    {item ? getProductName(item) : "Order"}
-                                  </strong>
-                                  <small>
                                     Order ID:{" "}
                                     {order.receipt || order._id || "-"}
-                                  </small>
+                                  </strong>
                                   <small>
                                     {formatDate(
                                       order.createdAt || order.created_at
@@ -377,6 +374,7 @@ export default function MyOrdersPage() {
           width: 100%;
           padding: 40px 0;
           margin-top: 145px;
+          min-height: 70vh;
         }
         .profile-container {
           width: 95%;
@@ -384,98 +382,93 @@ export default function MyOrdersPage() {
           margin: 0 auto;
           display: flex;
           align-items: flex-start;
-          gap: 30px;
+          gap: 28px;
           min-width: 0;
         }
         .profile-sidebar {
-          flex: 0 0 300px;
-          width: 300px;
-          min-width: 0;
+          flex: 0 0 285px;
+          width: 285px;
           background: #fff;
-          border-radius: 15px;
+          border-radius: 16px;
           overflow: hidden;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
+          border: 1px solid #eee;
         }
         .profile-top {
-          background: linear-gradient(135deg, #000, #333);
+          background: linear-gradient(135deg, #111, #393939);
           padding: 35px 20px;
           text-align: center;
           color: #fff;
           overflow-wrap: anywhere;
         }
         .profile-avatar {
-          width: 110px;
-          height: 110px;
+          width: 95px;
+          height: 95px;
           border-radius: 50%;
           background: #fff;
-          color: #000;
-          margin: 0 auto 18px;
+          color: #111;
+          margin: 0 auto 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 50px;
+          font-size: 42px;
           border: 4px solid rgba(255, 255, 255, 0.2);
         }
         .profile-top h3 {
-          font-size: 24px;
-          line-height: 1.35;
-          margin-bottom: 8px;
+          font-size: 21px;
+          line-height: 1.4;
+          margin: 0 0 8px;
           font-weight: 600;
           overflow-wrap: anywhere;
         }
         .profile-top p {
-          font-size: 14px;
-          line-height: 1.5;
-          opacity: 0.9;
-          margin-top: 4px;
+          font-size: 13px;
+          line-height: 1.6;
+          opacity: 0.85;
+          margin: 4px 0;
           overflow-wrap: anywhere;
         }
         .profile-menu {
-          padding: 20px;
+          padding: 18px;
         }
         .profile-menu a {
           display: flex;
           align-items: center;
-          gap: 12px;
-          min-width: 0;
+          gap: 13px;
           text-decoration: none;
           color: #444;
-          padding: 15px 18px;
-          margin-bottom: 10px;
-          border-radius: 10px;
-          transition: background 0.2s ease, color 0.2s ease;
-          font-size: 15px;
+          padding: 14px 16px;
+          margin-bottom: 8px;
+          border-radius: 9px;
+          transition: all 0.2s ease;
+          font-size: 14px;
           font-weight: 500;
         }
-        .profile-menu a span {
-          overflow-wrap: anywhere;
-        }
         .profile-menu a i {
-          flex: 0 0 22px;
           width: 22px;
           text-align: center;
+          font-size: 16px;
+          flex-shrink: 0;
         }
-        .profile-menu a:hover {
-          background: #000;
+        .profile-menu a:hover, .profile-menu a.active {
+          background: #111;
           color: #fff;
         }
         .profile-menu a.active {
-          background: #000;
-          color: #fff;
           font-weight: 600;
         }
         .profile-content {
-          flex: 1 1 0;
-          width: 0;
+          flex: 1;
           min-width: 0;
         }
         .profile-card {
           width: 100%;
           min-width: 0;
           background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-          padding: 35px;
+          border-radius: 15px;
+          box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
+          border: 1px solid #eee;
+          padding: 30px;
         }
         .orders-heading {
           display: flex;
@@ -486,29 +479,31 @@ export default function MyOrdersPage() {
           margin-bottom: 25px;
         }
         .orders-heading h2 {
-          margin: 0 0 8px;
-          font-size: 28px;
+          margin: 0 0 7px;
+          font-size: 27px;
           line-height: 1.3;
           color: #222;
+          font-weight: 700;
         }
         .orders-heading p {
           margin: 0;
-          color: #777;
+          color: #888;
           font-size: 14px;
         }
         .order-count {
-          background: #f1f1f1;
-          color: #222;
-          padding: 9px 16px;
+          background: #111;
+          color: #fff;
+          padding: 9px 17px;
           border-radius: 25px;
           font-size: 13px;
           font-weight: 600;
+          white-space: nowrap;
         }
         .orders-table-wrapper {
           width: 100%;
           overflow-x: auto;
           border: 1px solid #eee;
-          border-radius: 10px;
+          border-radius: 12px;
         }
         .orders-table {
           width: 100%;
@@ -522,7 +517,7 @@ export default function MyOrdersPage() {
         }
         .orders-table th {
           padding: 16px 13px;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 600;
           white-space: nowrap;
         }
@@ -542,9 +537,12 @@ export default function MyOrdersPage() {
           width: 65px;
           height: 65px;
           border: 1px solid #eee;
-          border-radius: 8px;
+          border-radius: 10px;
           overflow: hidden;
           background: #f8f8f8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .product-image img {
           width: 100%;
@@ -561,20 +559,21 @@ export default function MyOrdersPage() {
           font-size: 13px;
           color: #222;
           line-height: 1.5;
+          overflow-wrap: anywhere;
         }
         .product-info small {
           font-size: 11px;
           color: #888;
         }
         .price-cell {
-          font-weight: 600;
+          font-weight: 700;
           color: #222;
           white-space: nowrap;
         }
         .payment-info {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 7px;
         }
         .payment-info strong {
           font-size: 12px;
@@ -582,10 +581,10 @@ export default function MyOrdersPage() {
         }
         .payment-status {
           width: fit-content;
-          padding: 4px 8px;
+          padding: 5px 10px;
           border-radius: 20px;
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 700;
           text-transform: capitalize;
         }
         .payment-status.paid {
@@ -597,11 +596,13 @@ export default function MyOrdersPage() {
           color: #a56b00;
         }
         .order-status {
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           padding: 7px 12px;
           border-radius: 20px;
           font-size: 11px;
-          font-weight: 600;
+          font-weight: 700;
           white-space: nowrap;
           text-transform: capitalize;
         }
@@ -627,26 +628,26 @@ export default function MyOrdersPage() {
         }
         .empty-orders {
           text-align: center;
-          padding: 65px 20px;
+          padding: 60px 20px;
           border: 1px dashed #ddd;
           border-radius: 12px;
           background: #fcfcfc;
         }
         .empty-icon {
-          width: 85px;
-          height: 85px;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
           background: #f0f0f0;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto 20px;
-          font-size: 35px;
+          margin: 0 auto 18px;
+          font-size: 32px;
           color: #555;
         }
         .empty-orders h3 {
-          font-size: 22px;
-          margin-bottom: 10px;
+          font-size: 21px;
+          margin: 0 0 10px;
           color: #222;
         }
         .empty-orders p {
@@ -661,15 +662,39 @@ export default function MyOrdersPage() {
           align-items: center;
           justify-content: center;
           padding: 13px 25px;
-          background: #000;
+          background: #111;
           color: #fff;
           border-radius: 8px;
           text-decoration: none;
           font-size: 14px;
           font-weight: 600;
+          transition: 0.2s;
         }
         .shop-now-btn:hover {
-          background: #333;
+          background: #444;
+        }
+        .orders-loading {
+          min-height: 400px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 15px;
+          margin-top: 120px;
+          color: #333;
+        }
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #eee;
+          border-top-color: #111;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
         }
         .orders-message {
           text-align: center;
@@ -678,8 +703,8 @@ export default function MyOrdersPage() {
           font-size: 14px;
         }
         .alert-danger {
-          padding: 12px 18px;
-          border-radius: 6px;
+          padding: 13px 17px;
+          border-radius: 8px;
           margin-bottom: 20px;
           line-height: 1.5;
           overflow-wrap: anywhere;
@@ -698,27 +723,29 @@ export default function MyOrdersPage() {
           gap: 9px;
           min-height: 45px;
           padding: 12px 22px;
-          background: #000;
+          background: #111;
           color: #fff;
           border-radius: 8px;
           font-size: 14px;
           text-decoration: none;
-          font-weight: 500;
+          font-weight: 600;
+          transition: 0.2s;
         }
         .back-home-btn:hover {
-          background: #333;
+          background: #444;
         }
         .mobile-menu-toggle {
           display: none;
         }
         @media (max-width: 991px) {
           .profile-section {
-            padding: 30px 0;
+            padding: 25px 0;
+            margin-top: 120px;
           }
           .profile-container {
             flex-direction: column;
             align-items: stretch;
-            gap: 18px;
+            gap: 15px;
           }
           .mobile-menu-toggle {
             display: flex;
@@ -726,13 +753,13 @@ export default function MyOrdersPage() {
             justify-content: center;
             align-self: flex-start;
             gap: 10px;
-            min-height: 46px;
-            padding: 11px 18px;
-            border: 1px solid #ddd;
+            min-height: 44px;
+            padding: 10px 18px;
+            border: none;
             border-radius: 8px;
-            background: #000;
+            background: #111;
             color: #fff;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
           }
@@ -752,107 +779,316 @@ export default function MyOrdersPage() {
           .profile-top {
             padding: 25px 20px;
           }
+          .profile-avatar {
+            width: 80px;
+            height: 80px;
+            font-size: 35px;
+          }
           .profile-menu {
-            padding: 15px;
+            padding: 14px;
           }
           .profile-menu a {
-            padding: 14px 16px;
+            padding: 13px 15px;
+          }
+          .profile-card {
+            padding: 25px;
           }
         }
         @media (max-width: 768px) {
           .profile-section {
-            padding: 24px 0;
+            padding: 20px 0;
+            margin-top: 110px;
           }
           .profile-container {
-            width: calc(100% - 32px);
-            gap: 15px;
+            width: calc(100% - 30px);
+            gap: 14px;
           }
           .profile-card {
-            padding: 24px;
+            padding: 20px 16px;
+            border-radius: 12px;
+          }
+          .orders-heading {
+            align-items: flex-start;
+            margin-bottom: 20px;
+            gap: 12px;
           }
           .orders-heading h2 {
-            font-size: 25px;
+            font-size: 24px;
+          }
+          .orders-heading p {
+            font-size: 12px;
+            line-height: 1.6;
+          }
+          .order-count {
+            padding: 8px 13px;
+            font-size: 12px;
+          }
+          .orders-table-wrapper {
+            overflow: visible;
+            border: none;
+            border-radius: 0;
+          }
+          .orders-table {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            border-collapse: separate;
+          }
+          .orders-table thead {
+            display: none;
+          }
+          .orders-table tbody {
+            display: grid;
+            gap: 15px;
+            width: 100%;
+          }
+          .orders-table tbody tr {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 14px;
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #eaeaea;
+            border-radius: 13px;
+            background: #fff;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+          }
+          .orders-table tbody tr:hover {
+            background: #fff;
+          }
+          .orders-table tbody td {
+            min-width: 0;
+            padding: 11px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
+            overflow-wrap: anywhere;
+          }
+          .orders-table tbody td:nth-child(1) {
+            display: none;
+          }
+          .orders-table tbody td:nth-child(2) {
+            position: absolute;
+            top: 15px;
+            right: 14px;
+            padding: 0;
+            border: none;
+          }
+          .product-image {
+            width: 68px;
+            height: 68px;
+            border-radius: 10px;
+          }
+          .orders-table tbody td:nth-child(3) {
+            grid-column: 1 / -1;
+            min-height: 82px;
+            padding: 5px 80px 13px 0;
+            display: flex;
+            align-items: flex-start;
+          }
+          .product-info {
+            min-width: 0;
+            gap: 7px;
+          }
+          .product-info strong {
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .product-info small {
+            font-size: 11px;
+          }
+          .orders-table tbody td:nth-child(4)::before {
+            content: "Weight";
+          }
+          .orders-table tbody td:nth-child(5)::before {
+            content: "Quantity";
+          }
+          .orders-table tbody td:nth-child(6)::before {
+            content: "Subtotal";
+          }
+          .orders-table tbody td:nth-child(7)::before {
+            content: "Payment";
+          }
+          .orders-table tbody td:nth-child(8)::before {
+            content: "Order Status";
+          }
+          .orders-table tbody td:nth-child(n+4) {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 6px;
+            min-height: 62px;
+          }
+          .orders-table tbody td:nth-child(n+4)::before {
+            display: block;
+            color: #999;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+          .orders-table tbody td:nth-child(6) {
+            color: #111;
+            font-size: 13px;
+            font-weight: 700;
+          }
+          .payment-info {
+            gap: 5px;
+          }
+          .payment-info strong {
+            font-size: 11px;
+          }
+          .payment-status {
+            font-size: 9px;
+            padding: 4px 8px;
+          }
+          .order-status {
+            font-size: 10px;
+            padding: 6px 9px;
           }
           .orders-footer {
             justify-content: stretch;
+            margin-top: 20px;
           }
           .back-home-btn {
             width: 100%;
+            min-height: 46px;
+          }
+          .empty-orders {
+            padding: 40px 15px;
           }
         }
         @media (max-width: 480px) {
           .profile-section {
-            padding: 18px 0;
+            padding: 15px 0;
+            margin-top: 100px;
           }
           .profile-container {
-            width: calc(100% - 24px);
+            width: calc(100% - 22px);
             gap: 12px;
           }
           .mobile-menu-toggle {
-            min-height: 44px;
-            padding: 10px 15px;
-            font-size: 14px;
+            min-height: 42px;
+            padding: 9px 15px;
+            font-size: 13px;
           }
           .profile-card {
-            padding: 18px 15px;
-            border-radius: 10px;
-          }
-          .orders-heading {
-            align-items: flex-start;
-            flex-direction: column;
+            padding: 17px 12px;
+            border-radius: 11px;
           }
           .orders-heading h2 {
-            font-size: 23px;
+            font-size: 22px;
           }
-          .empty-orders {
-            padding: 45px 15px;
+          .orders-heading p {
+            font-size: 11px;
           }
-          .empty-orders h3 {
-            font-size: 20px;
+          .order-count {
+            font-size: 11px;
+            padding: 7px 11px;
+          }
+          .orders-table tbody {
+            gap: 12px;
+          }
+          .orders-table tbody tr {
+            padding: 12px;
+            gap: 0 10px;
+            border-radius: 11px;
+          }
+          .orders-table tbody td {
+            font-size: 11px;
+          }
+          .orders-table tbody td:nth-child(3) {
+            min-height: 78px;
+            padding-right: 75px;
+          }
+          .product-image {
+            width: 62px;
+            height: 62px;
+          }
+          .product-info strong {
+            font-size: 11px;
+          }
+          .product-info small {
+            font-size: 10px;
+          }
+          .orders-table tbody td:nth-child(n+4) {
+            min-height: 58px;
+          }
+          .orders-table tbody td:nth-child(n+4)::before {
+            font-size: 9px;
+          }
+          .orders-table tbody td:nth-child(6) {
+            font-size: 12px;
           }
           .profile-top {
-            padding: 22px 15px;
+            padding: 22px 14px;
           }
           .profile-top h3 {
-            font-size: 21px;
+            font-size: 19px;
+          }
+          .profile-top p {
+            font-size: 12px;
           }
           .profile-avatar {
-            width: 82px;
-            height: 82px;
-            font-size: 38px;
-            margin-bottom: 14px;
+            width: 75px;
+            height: 75px;
+            font-size: 32px;
           }
           .profile-menu {
-            padding: 12px;
+            padding: 11px;
           }
           .profile-menu a {
-            padding: 13px 12px;
-            margin-bottom: 7px;
-            font-size: 14px;
+            padding: 12px;
+            margin-bottom: 6px;
+            font-size: 13px;
+          }
+          .empty-orders h3 {
+            font-size: 19px;
+          }
+          .empty-orders p {
+            font-size: 12px;
           }
         }
         @media (max-width: 360px) {
           .profile-container {
-            width: calc(100% - 20px);
+            width: calc(100% - 18px);
           }
           .profile-card {
-            padding: 15px 12px;
+            padding: 14px 10px;
           }
-          .profile-top p {
-            font-size: 13px;
+          .orders-heading h2 {
+            font-size: 20px;
           }
-          .profile-menu {
-            padding: 9px;
+          .orders-table tbody tr {
+            padding: 10px;
+            gap: 0 7px;
+          }
+          .orders-table tbody td:nth-child(3) {
+            padding-right: 70px;
+          }
+          .product-image {
+            width: 56px;
+            height: 56px;
+          }
+          .orders-table tbody td:nth-child(n+4) {
+            min-height: 55px;
+          }
+          .order-status {
+            font-size: 9px;
+            padding: 5px 7px;
           }
           .profile-menu a {
             gap: 9px;
-            padding: 12px 9px;
-            font-size: 13px;
+            padding: 11px 9px;
+            font-size: 12px;
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .profile-menu a, .shop-now-btn, .back-home-btn {
-            transition: none;
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
           }
         }
       `}</style>

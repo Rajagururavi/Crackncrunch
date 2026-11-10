@@ -36,6 +36,7 @@ export default function PaymentPage() {
   const [cartItems, setCartItems] = useState([]);
   const [checkoutAddress, setCheckoutAddress] = useState({});
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [subtotal, setSubtotal] = useState(0);
   const [shipping, setShipping] = useState(0);
   const [total, setTotal] = useState(0);
@@ -83,6 +84,7 @@ export default function PaymentPage() {
       const checkout = JSON.parse(localStorage.getItem("checkoutAddress") || "{}");
       setCheckoutAddress(checkout);
       const user = JSON.parse(localStorage.getItem("user") || "null");
+      setUserId(String(user?.id || user?._id || user?.userId || user?.user_id || ""));
       setEmail(checkout?.email || checkout?.emailAddress || user?.email || localStorage.getItem("email") || "");
     } catch (error) {
       console.error("Payment data loading error:", error);
@@ -166,7 +168,11 @@ export default function PaymentPage() {
                   razorpay_signature: paymentResponse.razorpay_signature,
                   receipt: orderNumber,
                   orderDate,
-                  customer: checkoutAddress,
+                  customer: {
+                    ...checkoutAddress,
+                    id: userId,
+                    userId: userId,
+                  },
                   items: cartItems,
                   summary: {
                     subtotal,
