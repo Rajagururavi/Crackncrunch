@@ -7,40 +7,57 @@ export async function GET() {
   try {
     const { getSession } = await import("@/lib/session");
     const session = await getSession();
-    if (!session.isLoggedIn || !session.adminId) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized",
-        },
-        { status: 401 }
-      );
-    }
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const admin = await db.collection("admins").findOne({_id: new ObjectId(session.adminId),});
-    if (!admin) {
-      return Response.json(
+    let admin;
+    if (session?.isLoggedIn && session?.adminId && ObjectId.isValid(session.adminId)) {
+      admin = await db.collection("admins").findOne({
+        _id: new ObjectId(session.adminId),
+      });
+    } else {
+      admin = await db.collection("admins").findOne(
+        {},
         {
-          success: false,
-          message: "Admin not found",
-        },
-        { status: 404 }
+          projection: {
+            phone: 1,
+            gst: 1,
+            fssai: 1,
+            address: 1,
+            logo: 1,
+          },
+        }
       );
+    }
+    if (!admin) {
+      return Response.json({
+        success: true,
+        settings: {
+          phone: "",
+          gst: "",
+          fssai: "",
+          address: "",
+          logo: "",
+          username: "",
+          email: "",
+        },
+      });
     }
     return Response.json({
       success: true,
       settings: {
-        phone: admin.phone || "", gst: admin.gst || "", fssai: admin.fssai || "", address: admin.address || "", username: admin.username || "", email: admin.email || "", logo: admin.logo || "",
+        phone: admin.phone || "",
+        gst: admin.gst || "",
+        fssai: admin.fssai || "",
+        address: admin.address || "",
+        logo: admin.logo || "",
+        username: session?.isLoggedIn && session?.adminId ? admin.username || "" : "",
+        email: session?.isLoggedIn && session?.adminId ? admin.email || "" : "",
       },
     });
   } catch (error) {
-    console.error("GET SETTINGS ERROR:", error);
+    console.error("Settings GET error:", error);
     return Response.json(
-      {
-        success: false,
-        message: "Failed to load settings",
-      },
+      { success: false, message: "Failed to fetch settings" },
       { status: 500 }
     );
   }
@@ -58,6 +75,15 @@ export async function PUT(request) {
         { status: 401 }
       );
     }
+    if (!ObjectId.isValid(session.adminId)) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid admin session",
+        },
+        { status: 401 }
+      );
+    }
     const formData = await request.formData();
     const phone = formData.get("phone") || "";
     const gst = formData.get("gst") || "";
@@ -69,7 +95,9 @@ export async function PUT(request) {
     const logoFile = formData.get("logo");
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const admin = await db.collection("admins").findOne({_id: new ObjectId(session.adminId),});
+    const admin = await db.collection("admins").findOne({
+      _id: new ObjectId(session.adminId),
+    });
     if (!admin) {
       return Response.json(
         {
@@ -80,15 +108,38 @@ export async function PUT(request) {
       );
     }
     const updateData = {
-      phone, gst, fssai, address, username: username || admin.username, email, updatedAt: new Date(),
+      phone,
+      gst,
+      fssai,
+      address,
+      username: username || admin.username,
+      email,
+      updatedAt: new Date(),
     };
     if (logoFile && typeof logoFile !== "string" && logoFile.size > 0) {
+      if (!logoFile.type?.startsWith("image/")) {
+        return Response.json(
+          {
+            success: false,
+            message: "Please upload a valid image.",
+          },
+          { status: 400 }
+        );
+      }
+      if (logoFile.size > 5 * 1024 * 1024) {
+        return Response.json(
+          {
+            success: false,
+            message: "Logo size must be less than 5MB.",
+          },
+          { status: 400 }
+        );
+      }
       const uploadDir = path.join(process.cwd(), "public", "uploads");
       await fs.mkdir(uploadDir, {
         recursive: true,
       });
-      const originalName = logoFile.name || "logo";
-      const extension = path.extname(originalName) || ".png";
+      const extension = path.extname(logoFile.name || "") || ".png";
       const fileName = "logo-" + Date.now() + extension;
       const filePath = path.join(uploadDir, fileName);
       const buffer = Buffer.from(await logoFile.arrayBuffer());
@@ -118,7 +169,7 @@ export async function PUT(request) {
     return Response.json(
       {
         success: false,
-        message: "Failed to save settings", error: error.message,
+        message: "Failed to save settings",
       },
       { status: 500 }
     );
