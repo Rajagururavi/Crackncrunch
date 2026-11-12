@@ -282,8 +282,7 @@ export default function Footer() {
         </div>
         <div className="footer-top"></div>
         <div className="footer-bottom">
-          © {new Date().getFullYear()} Crack n Crunch. Designed and Developed
-          with Excellence by Digital Devora. All Rights Reserved.
+          © {new Date().getFullYear()} Crack n Crunch. Bringing Quality Nuts & Dry Fruits to Your Doorstep.
         </div>
       </footer>
     </>

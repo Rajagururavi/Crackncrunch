@@ -8,43 +8,56 @@ const STATUS_LIST = [
   { name: "Delivered", key: "delivered", color: "#27ae60", icon: "📦" },
   { name: "Cancelled", key: "cancelled", color: "#e74c3c", icon: "✕" },
 ];
+const DEFAULT_COUNT = {
+  processing: 0,
+  pending: 0,
+  shipping: 0,
+  delivered: 0,
+  cancelled: 0,
+  total_orders: 0,
+  revenue: 0,
+};
 export default function AdminDashboard() {
   const router = useRouter();
-  const [count, setCount] = useState({
-    processing: 0,
-    pending: 0,
-    shipping: 0,
-    delivered: 0,
-    cancelled: 0,
-    total_orders: 0,
-    revenue: 0,
-  });
+  const [count, setCount] = useState(DEFAULT_COUNT);
   const [orders, setOrders] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("Pending");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const loadDashboard = useCallback(async (status) => {
-    try {
-      setLoading(true);
-      setError("");
-      const response = await fetch(`/api/admin/dashboard?status=${encodeURIComponent(status)}`, { cache: "no-store" });
-      const data = await response.json();
-      if (response.status === 401) {
-        router.replace("/admin/login");
-        return;
+  const loadDashboard = useCallback(
+    async (status) => {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await fetch(`/api/admin/dashboard?status=${encodeURIComponent(status)}`, { cache: "no-store" });
+        const data = await response.json();
+        if (response.status === 401) {
+          router.replace("/admin/login");
+          return;
+        }
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Unable to load dashboard");
+        }
+        const dashboardCount = data.count || {};
+        setCount({
+          processing: Number(dashboardCount.processing || 0),
+          pending: Number(dashboardCount.pending || 0),
+          shipping: Number(dashboardCount.shipping || 0),
+          delivered: Number(dashboardCount.delivered || 0),
+          cancelled: Number(dashboardCount.cancelled || 0),
+          total_orders: Number(dashboardCount.total_orders || 0),
+          revenue: Number(dashboardCount.revenue || 0),
+        });
+        setOrders(Array.isArray(data.orders) ? data.orders : []);
+      } catch (err) {
+        console.error("Dashboard error:", err);
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
       }
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Unable to load dashboard");
-      }
-      setCount(data.count);
-      setOrders(data.orders || []);
-    } catch (err) {
-      console.error("Dashboard error:", err);
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+    },
+    [router]
+  );
   useEffect(() => {
     loadDashboard("Pending");
   }, [loadDashboard]);
@@ -53,31 +66,51 @@ export default function AdminDashboard() {
     loadDashboard(status);
   };
   const total = count.processing + count.pending + count.shipping + count.delivered + count.cancelled;
-  const getPercent = (value) => total > 0 ? (value / total) * 100 : 0;
-  const pieParts = STATUS_LIST.map((item) => ({...item, value: count[item.key], percent: getPercent(count[item.key]), }));
+  const getPercent = (value) => {
+    return total > 0 ? (value / total) * 100 : 0;
+  };
+  const pieParts = STATUS_LIST.map((item) => ({
+    ...item, value: count[item.key], percent: getPercent(count[item.key]),
+  }));
   let currentPercent = 0;
-  const pieGradient = pieParts.map((item) => {
-    const start = currentPercent;
-    currentPercent += item.percent;
-    return `${item.color} ${start}% ${currentPercent}%`;
-  }).join(", ");
+  const pieGradient = pieParts
+    .map((item) => {
+      const start = currentPercent;
+      currentPercent += item.percent;
+      return `${item.color} ${start}% ${currentPercent}%`;
+    })
+    .join(", ");
   const money = (value) => new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 2,
-  }).format(value || 0);
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
   const formatDate = (date) => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString("en-IN", {
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) return "-";
+    return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
+  };
+  const getStatusClass = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    return (STATUS_LIST.find((item) => item.key === normalized)?.name || "Unknown");
   };
   return (
     <>
       <style jsx>{`
         .dashboard {
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           color: #252525;
+          box-sizing: border-box;
+        }
+        .dashboard *, .dashboard *::before, .dashboard *::after {
+          box-sizing: border-box;
         }
         .welcome {
           margin-bottom: 25px;
@@ -85,32 +118,36 @@ export default function AdminDashboard() {
         .welcome h1 {
           font-size: 27px;
           font-weight: 700;
-          margin-bottom: 7px;
+          margin: 0 0 7px;
+          color: #222;
         }
         .welcome p {
           color: #888;
           font-size: 14px;
+          margin: 0;
         }
         .stats {
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 16px;
           margin-bottom: 25px;
+          width: 100%;
         }
         .stat-card {
+          width: 100%;
+          min-width: 0;
           background: white;
           border: 1px solid #eee;
           border-radius: 12px;
           padding: 20px;
           text-align: left;
           cursor: pointer;
-          transition: .2s;
-          box-shadow: 0 3px 12px rgba(0,0,0,.04);
-          min-width: 0;
+          transition: 0.2s ease;
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
         }
         .stat-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 8px 20px rgba(0,0,0,.08);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
         }
         .stat-card.active {
           border: 2px solid #222;
@@ -123,24 +160,28 @@ export default function AdminDashboard() {
           gap: 8px;
           margin-bottom: 18px;
         }
+        .stat-card h4 {
+          font-size: 13px;
+          color: #777;
+          font-weight: 500;
+          margin: 0;
+          overflow-wrap: anywhere;
+        }
         .stat-icon {
           width: 39px;
           height: 39px;
+          flex-shrink: 0;
           display: grid;
           place-items: center;
           border-radius: 9px;
           font-size: 19px;
           background: #f4f4f4;
         }
-        .stat-card h4 {
-          font-size: 13px;
-          color: #777;
-          font-weight: 500;
-        }
         .stat-card h2 {
           font-size: 29px;
-          margin-bottom: 9px;
+          margin: 0 0 9px;
           color: #222;
+          font-weight: 700;
         }
         .view-details {
           font-size: 12px;
@@ -151,18 +192,20 @@ export default function AdminDashboard() {
           grid-template-columns: 1.5fr 1fr;
           gap: 18px;
           margin-bottom: 25px;
+          width: 100%;
         }
         .panel {
           background: white;
           padding: 23px;
           border-radius: 12px;
           border: 1px solid #eee;
-          box-shadow: 0 3px 12px rgba(0,0,0,.04);
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
           min-width: 0;
         }
         .panel h3 {
           font-size: 17px;
-          margin-bottom: 20px;
+          margin: 0 0 20px;
+          font-weight: 600;
         }
         .chart-content {
           display: flex;
@@ -170,10 +213,12 @@ export default function AdminDashboard() {
           justify-content: center;
           gap: 35px;
           flex-wrap: wrap;
+          min-width: 0;
         }
         .pie {
           width: 220px;
           height: 220px;
+          max-width: 100%;
           flex-shrink: 0;
           border-radius: 50%;
           position: relative;
@@ -210,6 +255,7 @@ export default function AdminDashboard() {
           display: flex;
           flex-direction: column;
           gap: 14px;
+          min-width: 0;
         }
         .legend-item {
           display: flex;
@@ -217,6 +263,9 @@ export default function AdminDashboard() {
           gap: 9px;
           font-size: 13px;
           color: #555;
+        }
+        .legend-item strong {
+          color: #222;
         }
         .dot {
           width: 10px;
@@ -234,6 +283,7 @@ export default function AdminDashboard() {
         .muted {
           font-size: 13px;
           color: #888;
+          margin: 0;
         }
         .summary-list {
           border-top: 1px solid #eee;
@@ -245,6 +295,7 @@ export default function AdminDashboard() {
         .summary-row {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           gap: 12px;
           font-size: 13px;
           color: #666;
@@ -257,7 +308,9 @@ export default function AdminDashboard() {
           border-radius: 12px;
           padding: 22px;
           border: 1px solid #eee;
-          box-shadow: 0 3px 12px rgba(0,0,0,.04);
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+          min-width: 0;
+          width: 100%;
         }
         .table-heading {
           display: flex;
@@ -268,18 +321,37 @@ export default function AdminDashboard() {
         }
         .table-heading h3 {
           font-size: 17px;
+          margin: 0 0 5px;
         }
         .table-heading span {
           font-size: 12px;
           color: #888;
         }
+        .refresh {
+          padding: 9px 15px;
+          border: 1px solid #ddd;
+          background: white;
+          border-radius: 7px;
+          cursor: pointer;
+          font-size: 12px;
+          color: #333;
+          white-space: nowrap;
+          transition: 0.2s;
+        }
+        .refresh:hover {
+          background: #f5f5f5;
+          border-color: #aaa;
+        }
+        .refresh:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
         .table-scroll {
-          overflow-x: auto;
           width: 100%;
+          overflow-x: auto;
         }
         table {
           width: 100%;
-          min-width: 650px;
           border-collapse: collapse;
         }
         thead {
@@ -297,6 +369,10 @@ export default function AdminDashboard() {
           border-bottom: 1px solid #eee;
           font-size: 13px;
           color: #444;
+          overflow-wrap: anywhere;
+        }
+        tbody tr:hover {
+          background: #fafafa;
         }
         .status {
           display: inline-block;
@@ -305,31 +381,37 @@ export default function AdminDashboard() {
           font-size: 11px;
           font-weight: 600;
           background: #f2f2f2;
+          white-space: nowrap;
         }
-        .status.Processing { 
-          color: #b9770e; 
-          background: #fef5e7; 
+        .status.Processing {
+          color: #b9770e;
+          background: #fef5e7;
         }
-        .status.Pending { 
-          color: #2471a3; 
-          background: #ebf5fb; 
+        .status.Pending {
+          color: #2471a3;
+          background: #ebf5fb;
         }
-        .status.Shipping { 
-          color: #76448a; 
-          background: #f4ecf7; 
+        .status.Shipping {
+          color: #76448a;
+          background: #f4ecf7;
         }
-        .status.Delivered { 
-          color: #1e8449; 
-          background: #e9f7ef; 
+        .status.Delivered {
+          color: #1e8449;
+          background: #e9f7ef;
         }
-        .status.Cancelled { c
-          olor: #c0392b; 
-          background: #fdedec; 
+        .status.Cancelled {
+          color: #c0392b;
+          background: #fdedec;
+        }
+        .status.Unknown {
+          color: #666;
+          background: #f2f2f2;
         }
         .empty {
           text-align: center;
           padding: 35px;
           color: #888;
+          font-size: 13px;
         }
         .error {
           background: #fff0f0;
@@ -337,73 +419,214 @@ export default function AdminDashboard() {
           padding: 15px;
           border-radius: 8px;
           margin-bottom: 15px;
+          font-size: 13px;
+          overflow-wrap: anywhere;
         }
-        .refresh {
-          padding: 9px 15px;
-          border: 1px solid #ddd;
-          background: white;
-          border-radius: 7px;
-          cursor: pointer;
-          font-size: 12px;
+        .loading {
+          text-align: center;
+          padding: 35px 15px;
+          color: #777;
+          font-size: 14px;
         }
-        @media(max-width: 1200px) {
+        .mobile-orders {
+          display: none;
+        }
+        .order-card {
+          border: 1px solid #eee;
+          border-radius: 10px;
+          padding: 14px;
+          margin-bottom: 12px;
+          min-width: 0;
+          background: #fff;
+        }
+        .order-card:last-child {
+          margin-bottom: 0;
+        }
+        .order-card-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 13px;
+        }
+        .order-number {
+          font-size: 13px;
+          font-weight: 700;
+          color: #222;
+          overflow-wrap: anywhere;
+        }
+        .order-card-info {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 13px 10px;
+        }
+        .order-info-item {
+          min-width: 0;
+        }
+        .order-info-item span {
+          display: block;
+          font-size: 11px;
+          color: #999;
+          margin-bottom: 5px;
+        }
+        .order-info-item strong {
+          display: block;
+          font-size: 13px;
+          color: #333;
+          font-weight: 600;
+          overflow-wrap: anywhere;
+        }
+        @media (max-width: 1200px) {
           .stats {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
-        @media(max-width: 850px) {
+        @media (max-width: 900px) {
           .analytics {
             grid-template-columns: 1fr;
           }
         }
-        @media(max-width: 600px) {
+        @media (max-width: 600px) {
+          .welcome {
+            margin-bottom: 18px;
+          }
           .welcome h1 {
             font-size: 22px;
+          }
+          .welcome p {
+            font-size: 12px;
+            line-height: 1.5;
           }
           .stats {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
+            margin-bottom: 18px;
           }
           .stat-card {
-            padding: 14px;
+            padding: 13px;
+            border-radius: 10px;
           }
           .stat-card.active {
-            padding: 13px;
+            padding: 12px;
+          }
+          .stat-top {
+            margin-bottom: 12px;
+            gap: 5px;
           }
           .stat-card h4 {
-            font-size: 12px;
+            font-size: 11px;
+            line-height: 1.4;
           }
           .stat-card h2 {
-            font-size: 25px;
+            font-size: 24px;
+            margin-bottom: 7px;
           }
           .stat-icon {
-            width: 33px;
-            height: 33px;
-            font-size: 16px;
+            width: 31px;
+            height: 31px;
+            font-size: 15px;
+            border-radius: 7px;
+          }
+          .view-details {
+            font-size: 11px;
+          }
+          .analytics {
+            gap: 13px;
+            margin-bottom: 18px;
           }
           .panel, .table-panel {
-            padding: 16px;
+            padding: 15px;
+            border-radius: 10px;
+          }
+          .panel h3, .table-heading h3 {
+            font-size: 15px;
           }
           .chart-content {
-            gap: 22px;
+            gap: 20px;
           }
           .pie {
-            width: 190px;
-            height: 190px;
+            width: 180px;
+            height: 180px;
           }
           .pie::after {
-            width: 100px;
-            height: 100px;
+            width: 95px;
+            height: 95px;
+          }
+          .pie-center strong {
+            font-size: 22px;
+          }
+          .legend {
+            gap: 10px;
+          }
+          .legend-item {
+            font-size: 12px;
           }
           .revenue {
-            font-size: 28px;
+            font-size: 27px;
+            margin: 18px 0 7px;
+          }
+          .summary-list {
+            margin-top: 17px;
+            gap: 12px;
+          }
+          .table-heading {
+            margin-bottom: 15px;
           }
           .table-heading h3 {
             font-size: 15px;
           }
+          .refresh {
+            padding: 8px 11px;
+            font-size: 11px;
+          }
+          .table-scroll {
+            display: none;
+          }
+          .mobile-orders {
+            display: block;
+          }
+          .order-card {
+            padding: 12px;
+          }
         }
-        @media(max-width: 350px) {
+        @media (max-width: 380px) {
+          .welcome h1 {
+            font-size: 20px;
+          }
+          .stat-card {
+            padding: 11px;
+          }
+          .stat-card.active {
+            padding: 10px;
+          }
+          .stat-card h2 {
+            font-size: 22px;
+          }
+          .stat-icon {
+            width: 28px;
+            height: 28px;
+            font-size: 14px;
+          }
+          .pie {
+            width: 160px;
+            height: 160px;
+          }
+          .pie::after {
+            width: 85px;
+            height: 85px;
+          }
+          .revenue {
+            font-size: 24px;
+          }
+        }
+        @media (max-width: 320px) {
           .stats {
+            grid-template-columns: 1fr;
+          }
+          .chart-content {
+            gap: 15px;
+          }
+          .order-card-info {
             grid-template-columns: 1fr;
           }
         }
@@ -413,16 +636,24 @@ export default function AdminDashboard() {
           <h1>Welcome Back, Admin 👋</h1>
           <p>Here is what's happening with your store today.</p>
         </div>
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error" role="alert">
+            {error}
+          </div>
+        )}
         <div className="stats">
           {STATUS_LIST.map((item) => (
-            <button key={item.key} className={`stat-card ${selectedStatus === item.name ? "active" : ""}`} onClick={() => selectStatus(item.name)}>
+            <button type="button" key={item.key} className={`stat-card ${selectedStatus === item.name ? "active" : ""}`}
+              onClick={() => selectStatus(item.name)} aria-pressed={selectedStatus === item.name}
+            >
               <div className="stat-top">
                 <h4>{item.name} Orders</h4>
                 <div className="stat-icon">{item.icon}</div>
               </div>
               <h2>{count[item.key]}</h2>
-              <span className="view-details">View Details →</span>
+              <span className="view-details">
+                View Details →
+              </span>
             </button>
           ))}
         </div>
@@ -455,7 +686,9 @@ export default function AdminDashboard() {
             <div className="revenue">
               {money(count.revenue)}
             </div>
-            <p className="muted">Total Revenue (Current Year)</p>
+            <p className="muted">
+              Total Revenue (Current Year)
+            </p>
             <div className="summary-list">
               {STATUS_LIST.map((item) => (
                 <div className="summary-row" key={item.key}>
@@ -476,34 +709,98 @@ export default function AdminDashboard() {
               <h3>{selectedStatus} Orders</h3>
               <span>Latest orders</span>
             </div>
-            <button className="refresh" onClick={() => loadDashboard(selectedStatus)}>
-              ↻ Refresh
+            <button type="button" className="refresh" onClick={() => loadDashboard(selectedStatus)} disabled={loading}>
+              {loading ? "Loading..." : "↻ Refresh"}
             </button>
           </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Order No</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.orderNumber || "-"}</td>
-                    <td>{order.customer || "-"}</td>
-                    <td>₹{Number(order.amount || 0).toLocaleString("en-IN")}</td>
-                    <td>{order.status || "-"}</td>
-                    <td>{order.date ? new Date(order.date).toLocaleDateString("en-IN", {day: "2-digit", month: "short", year: "numeric", }): "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <div className="loading">
+              Loading orders...
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="empty">
+              No {selectedStatus.toLowerCase()} orders found.
+            </div>
+          ) : (
+            <>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Order No</th>
+                      <th>Customer</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order, index) => {
+                      const status = getStatusClass(order.status);
+                      return (
+                        <tr key={order.id || order._id || order.orderNumber || index}>
+                          <td>
+                            {order.orderNumber || "-"}
+                          </td>
+                          <td>
+                            {order.customer || "-"}
+                          </td>
+                          <td>
+                            {money(order.amount)}
+                          </td>
+                          <td>
+                            <span className={`status ${status}`}>
+                              {order.status || "-"}
+                            </span>
+                          </td>
+                          <td>
+                            {formatDate(order.date)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mobile-orders">
+                {orders.map((order, index) => {
+                  const status = getStatusClass(order.status);
+                  return (
+                    <div className="order-card" key={order.id || order._id || order.orderNumber || index}>
+                      <div className="order-card-top">
+                        <div className="order-number">
+                          {order.orderNumber || "Order"}
+                        </div>
+                        <span className={`status ${status}`}>
+                          {order.status || "-"}
+                        </span>
+                      </div>
+                      <div className="order-card-info">
+                        <div className="order-info-item">
+                          <span>Customer</span>
+                          <strong>
+                            {order.customer || "-"}
+                          </strong>
+                        </div>
+                        <div className="order-info-item">
+                          <span>Amount</span>
+                          <strong>
+                            {money(order.amount)}
+                          </strong>
+                        </div>
+                        <div className="order-info-item">
+                          <span>Order Date</span>
+                          <strong>
+                            {formatDate(order.date)}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
       </div>
     </>

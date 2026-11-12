@@ -91,51 +91,59 @@ export default function OrdersPage() {
     }
     router.push(`/admin/orders/${encodeURIComponent(order.receipt)}`);
   }
+  function toggleSearch() {
+    if (searchOpen) {
+      setSearch("");
+      setCurrentPage(1);
+    }
+    setSearchOpen((previous) => !previous);
+  }
   return (
     <div className="orders-page">
       <div className="table-header">
-        <div>
+        <div className="header-title">
           <h2>All Orders</h2>
           <p>Manage and view customer orders</p>
         </div>
         <div className="search-area">
           <form className={`search-form ${searchOpen ? "active" : ""}`} onSubmit={(e) => e.preventDefault()}>
-            <input type="text" placeholder="Search order, customer, mobile..." value={search} onChange={(e) => handleSearch(e.target.value)} />
+            <input type="text" placeholder="Search order, customer, mobile..." value={search} onChange={(e) => handleSearch(e.target.value)} aria-label="Search orders"/>
           </form>
-          <button type="button" className="search-icon" title="Search orders" onClick={() => {
-            if (searchOpen) {
-              setSearch("");
-              setCurrentPage(1);
-            }
-            setSearchOpen((previous) => !previous);
-          }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <button type="button" className="search-icon" title="Search orders" aria-label="Toggle search" onClick={toggleSearch}>
+            <svg
+              width="19" height="19" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+            >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-4-4" />
             </svg>
           </button>
-          <button type="button" className="refresh-btn" onClick={fetchOrders} disabled={loading} title="Refresh orders">
+          <button type="button" className="refresh-btn" onClick={fetchOrders} disabled={loading} title="Refresh orders" aria-label="Refresh orders">
             ↻
           </button>
         </div>
       </div>
       <div className="orders-summary">
-        <div>
+        <div className="summary-card">
           <span>Total Orders</span>
           <strong>{orders.length}</strong>
         </div>
-        <div>
+        <div className="summary-card">
           <span>Showing Results</span>
           <strong>{filteredOrders.length}</strong>
         </div>
       </div>
       <div className="table-wrapper">
         {loading ? (
-          <div className="no-data">Loading orders...</div>
+          <div className="no-data">
+            Loading orders...
+          </div>
         ) : error ? (
           <div className="no-data error-message">
             {error}
-            <button onClick={fetchOrders}>Try Again</button>
+            <button type="button" onClick={fetchOrders}>
+              Try Again
+            </button>
           </div>
         ) : (
           <div className="table-scroll">
@@ -145,11 +153,11 @@ export default function OrdersPage() {
                   <th>#</th>
                   <th>Order ID</th>
                   <th>Customer</th>
-                  <th>Mobile</th>
+                  <th className="mobile-hide">Mobile</th>
                   <th>Amount</th>
-                  <th>Payment</th>
+                  <th className="mobile-hide">Payment</th>
                   <th>Status</th>
-                  <th>Date</th>
+                  <th className="mobile-hide">Date</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -161,12 +169,14 @@ export default function OrdersPage() {
                         {(currentPage - 1) * ordersPerPage + index + 1}
                       </td>
                       <td>
-                        <strong>#{order.receipt || "N/A"}</strong>
+                        <strong>
+                          #{order.receipt || "N/A"}
+                        </strong>
                       </td>
                       <td>
                         {order.customer?.fullname || "N/A"}
                       </td>
-                      <td>
+                      <td className="mobile-hide">
                         {order.customer?.mobile || "N/A"}
                       </td>
                       <td>
@@ -174,7 +184,7 @@ export default function OrdersPage() {
                           {formatAmount(order.summary?.total)}
                         </strong>
                       </td>
-                      <td>
+                      <td className="mobile-hide">
                         {order.paymentMethod || "N/A"}
                       </td>
                       <td>
@@ -182,23 +192,18 @@ export default function OrdersPage() {
                           {order.orderStatus || "Pending"}
                         </span>
                       </td>
-                      <td>
+                      <td className="mobile-hide">
                         {formatDate(
-                          order.createdAt,
-                          order.orderDate
+                          order.createdAt, order.orderDate
                         )}
                       </td>
-                      <td>
-                        <button type="button" className="view-btn" title="View Order Details" onClick={() => openOrderDetails(order)} disabled={!order.receipt}>
+                      <td className="action-cell">
+                        <button type="button" className="view-btn" title="View Order Details" aria-label="View order details"
+                          onClick={() => openOrderDetails(order)} disabled={!order.receipt}
+                        >
                           <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                           >
                             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
                             <circle cx="12" cy="12" r="3" />
@@ -224,10 +229,10 @@ export default function OrdersPage() {
           <span>
             Page {currentPage} of {totalPages}
           </span>
-          <button disabled={currentPage === 1} onClick={() =>setCurrentPage((page) => page - 1)}>
+          <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1) }>
             Previous
           </button>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>
+          <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>
             Next
           </button>
         </div>
@@ -235,7 +240,14 @@ export default function OrdersPage() {
       <style jsx>{`
         .orders-page {
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           color: #222;
+          box-sizing: border-box;
+          padding-bottom: 25px;
+        }
+        .orders-page * {
+          box-sizing: border-box;
         }
         .table-header {
           display: flex;
@@ -249,6 +261,7 @@ export default function OrdersPage() {
           font-size: 28px;
           color: #222;
           margin: 0 0 5px;
+          font-weight: 700;
         }
         .table-header p {
           color: #777;
@@ -259,6 +272,10 @@ export default function OrdersPage() {
           display: flex;
           align-items: center;
           gap: 10px;
+          min-width: 0;
+        }
+        .search-form {
+          min-width: 0;
         }
         .search-icon {
           width: 42px;
@@ -284,19 +301,24 @@ export default function OrdersPage() {
           border: 0;
           border-radius: 6px;
           outline: none;
-          transition: 0.4s;
+          transition: 0.3s;
           pointer-events: none;
         }
         .search-form.active input {
           width: 260px;
+          max-width: 100%;
           opacity: 1;
           padding: 10px;
           border: 1px solid #ddd;
           pointer-events: auto;
         }
+        .search-form input:focus {
+          border-color: #0d6efd;
+        }
         .refresh-btn {
           width: 42px;
           height: 42px;
+          flex-shrink: 0;
           border: 1px solid #ddd;
           background: white;
           border-radius: 50%;
@@ -317,7 +339,7 @@ export default function OrdersPage() {
           display: flex;
           gap: 15px;
         }
-        .orders-summary div {
+        .summary-card {
           background: white;
           border: 1px solid #eee;
           border-radius: 9px;
@@ -336,6 +358,7 @@ export default function OrdersPage() {
         }
         .table-wrapper {
           width: 95%;
+          max-width: 100%;
           margin: 0 auto;
           background: #fff;
           border-radius: 12px;
@@ -345,16 +368,19 @@ export default function OrdersPage() {
         .table-scroll {
           width: 100%;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
         }
         .order-table {
           width: 100%;
+          min-width: 950px;
           border-collapse: collapse;
         }
         .order-table thead {
           background: #f8f9fa;
         }
         .order-table th {
-          padding: 18px;
+          padding: 18px 14px;
           text-align: left;
           color: #444;
           font-size: 13px;
@@ -362,7 +388,7 @@ export default function OrdersPage() {
           white-space: nowrap;
         }
         .order-table td {
-          padding: 18px;
+          padding: 18px 14px;
           border-bottom: 1px solid #eee;
           font-size: 13px;
           white-space: nowrap;
@@ -381,6 +407,7 @@ export default function OrdersPage() {
           font-size: 11px;
           font-weight: bold;
           text-transform: capitalize;
+          white-space: nowrap;
         }
         .pending {
           background: #ffc107;
@@ -425,7 +452,7 @@ export default function OrdersPage() {
         }
         .no-data {
           text-align: center;
-          padding: 40px;
+          padding: 40px 15px;
           color: #777;
         }
         .error-message {
@@ -456,15 +483,58 @@ export default function OrdersPage() {
           border-radius: 6px;
           padding: 9px 14px;
           cursor: pointer;
+          transition: 0.2s;
+        }
+        .pagination-area button:hover:not(:disabled) {
+          background: #0d6efd;
+          color: #fff;
+          border-color: #0d6efd;
         }
         .pagination-area button:disabled {
           opacity: 0.4;
           cursor: not-allowed;
         }
+        @media (max-width: 1200px) {
+          .table-header, .orders-summary, .table-wrapper, .pagination-area {
+            width: 97%;
+          }
+          .order-table th, .order-table td {
+            padding: 15px 11px;
+          }
+        }
+        @media (max-width: 900px) {
+          .table-header {
+            margin-top: 22px;
+          }
+          .table-header h2 {
+            font-size: 25px;
+          }
+          .orders-summary {
+            gap: 10px;
+          }
+          .summary-card {
+            flex: 1;
+            min-width: 0;
+          }
+          .table-wrapper {
+            border-radius: 9px;
+          }
+          .pagination-area {
+            flex-wrap: wrap;
+          }
+        }
         @media (max-width: 700px) {
           .table-header {
-            align-items: flex-start;
             flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+            margin: 20px auto 16px;
+          }
+          .table-header h2 {
+            font-size: 23px;
+          }
+          .table-header p {
+            font-size: 12px;
           }
           .search-area {
             width: 100%;
@@ -475,28 +545,142 @@ export default function OrdersPage() {
           }
           .search-form.active input {
             width: 100%;
+            min-width: 0;
+          }
+          .search-form:not(.active) {
+            display: none;
+          }
+          .search-icon, .refresh-btn {
+            width: 40px;
+            height: 40px;
           }
           .orders-summary {
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
           }
-          .orders-summary div {
-            flex: 1;
-            min-width: 120px;
+          .summary-card {
+            min-width: 0;
+            padding: 13px;
+          }
+          .orders-summary span {
+            font-size: 11px;
+          }
+          .orders-summary strong {
+            font-size: 20px;
+          }
+          .table-wrapper {
+            width: 97%;
+            border-radius: 9px;
+          }
+          .table-scroll {
+            width: 100%;
+            overflow-x: hidden;
+          }
+          .order-table {
+            width: 100%;
+            min-width: 0;
+            table-layout: fixed;
+          }
+          .mobile-hide {
+            display: none;
+          }
+          .order-table th, .order-table td {
+            padding: 11px 4px;
+            font-size: 10px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .order-table th:nth-child(1), .order-table td:nth-child(1) {
+            width: 8%;
+            text-align: center;
+          }
+          .order-table th:nth-child(2), .order-table td:nth-child(2) {
+            width: 22%;
+          }
+          .order-table th:nth-child(3), .order-table td:nth-child(3) {
+            width: 24%;
+          }
+          .order-table th:nth-child(5), .order-table td:nth-child(5) {
+            width: 22%;
+          }
+          .order-table th:nth-child(7), .order-table td:nth-child(7) {
+            width: 14%;
+            text-align: center;
+          }
+          .order-table th:nth-child(9), .order-table td:nth-child(9) {
+            width: 10%;
+            text-align: center;
+          }
+          .order-table td:nth-child(2) strong, .order-table td:nth-child(5) strong {
+            font-size: 10px;
+          }
+          .status {
+            padding: 5px 4px;
+            font-size: 8px;
+            border-radius: 12px;
+          }
+          .view-btn {
+            width: 29px;
+            height: 29px;
+            margin: auto;
+            border-radius: 6px;
+          }
+          .view-btn svg {
+            width: 15px;
+            height: 15px;
           }
           .pagination-area {
+            width: 97%;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12px;
             flex-wrap: wrap;
+          }
+          .pagination-area button {
+            padding: 9px 12px;
           }
         }
         @media (max-width: 400px) {
-          .table-header h2 {
-            font-size: 23px;
-          }
-          .table-wrapper, .table-header, .orders-summary, .pagination-area {
+          .table-header, .orders-summary, .table-wrapper, .pagination-area {
             width: 96%;
           }
+          .table-header h2 {
+            font-size: 21px;
+          }
           .search-icon, .refresh-btn {
-            width: 38px;
-            height: 38px;
+            width: 37px;
+            height: 37px;
+          }
+          .summary-card {
+            padding: 11px;
+          }
+          .orders-summary strong {
+            font-size: 18px;
+          }
+          .order-table th, .order-table td {
+            padding: 10px 3px;
+            font-size: 9px;
+          }
+          .status {
+            padding: 4px 3px;
+            font-size: 7px;
+          }
+          .view-btn {
+            width: 26px;
+            height: 26px;
+          }
+          .view-btn svg {
+            width: 14px;
+            height: 14px;
+          }
+          .pagination-area {
+            gap: 6px;
+          }
+          .pagination-area button {
+            padding: 8px 10px;
           }
         }
       `}</style>
