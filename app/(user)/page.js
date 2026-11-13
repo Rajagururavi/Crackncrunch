@@ -1537,12 +1537,15 @@ export default function HomePage() {
         }
         @media (max-width: 768px) {
           .hero-banner {
+            width: 100%;
             height: auto !important;
             min-height: 0 !important;
             margin-top: 104px;
             overflow: hidden;
           }
           .banner-slider {
+            display: flex;
+            width: 100%;
             height: auto !important;
             align-items: flex-start;
           }
@@ -1551,9 +1554,10 @@ export default function HomePage() {
             flex: 0 0 100%;
             width: 100%;
             min-width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
+            height: auto !important;
+            max-height: none !important;
+            object-fit: contain !important;
+            object-position: center;
           }
           .slider-btn {
             width: 34px;
@@ -1745,8 +1749,18 @@ export default function HomePage() {
         }
         @media (max-width: 480px) {
           .hero-banner {
-            height: clamp(145px, 42vw, 200px);
+            height: auto !important;
+            min-height: 0 !important;
             margin-top: 55px;
+          }
+          .banner-slider {
+            height: auto !important;
+          }
+          .banner-slider img {
+            width: 100%;
+            height: auto !important;
+            min-height: 0 !important;
+            object-fit: contain !important;
           }
           .category-section, .premium-section {
             padding: 20px 10px;
@@ -1802,8 +1816,13 @@ export default function HomePage() {
         }
         @media (max-width: 359px) {
           .hero-banner {
-            height: 140px;
+            height: auto !important;
+            min-height: 0 !important;
             margin-top: 50px;
+          }
+          .banner-slider img {
+            height: auto !important;
+            object-fit: contain !important;
           }
           .category-section, .premium-section {
             padding-right: 8px;
