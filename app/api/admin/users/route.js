@@ -1,13 +1,9 @@
-
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-
 export async function GET() {
   try {
-    // Check admin login
     const { getSession } = await import("@/lib/session");
     const session = await getSession();
-
     if (!session?.isLoggedIn || !session?.adminId) {
       return NextResponse.json(
         {
@@ -17,12 +13,8 @@ export async function GET() {
         { status: 401 }
       );
     }
-
-    // Connect MongoDB
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-
-    // Get customer details without password
     const users = await db
       .collection("users")
       .find(
@@ -40,10 +32,7 @@ export async function GET() {
             createdAt: 1,
           },
         }
-      )
-      .sort({ createdAt: -1 })
-      .toArray();
-
+      ).sort({ createdAt: -1 }).toArray();
     return NextResponse.json({
       success: true,
       totalUsers: users.length,
@@ -51,7 +40,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Admin users API error:", error);
-
     return NextResponse.json(
       {
         success: false,

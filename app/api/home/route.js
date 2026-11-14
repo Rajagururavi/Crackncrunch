@@ -4,18 +4,9 @@ export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db("crackncrunch");
-    const categories = await db
-      .collection("categories")
-      .find({})
-      .toArray();
-    const brands = await db
-      .collection("brands")
-      .find({})
-      .toArray();
-    const products = await db
-      .collection("products")
-      .find({})
-      .toArray();
+    const categories = await db.collection("categories").find({}).toArray();
+    const brands = await db.collection("brands").find({}).toArray();
+    const products = await db.collection("products").find({}).toArray();
     const cleanCategories = categories.map((category) => ({
       ...category,
       _id: category._id.toString(),
@@ -43,13 +34,7 @@ export async function GET() {
     });
     const cleanBrands = brands.map((brand) => {
       const brandId = brand._id.toString();
-      const brandName =
-        brand.brandName ||
-        brand.brand_name ||
-        brand.brand ||
-        brand.name ||
-        brand.title ||
-        "";
+      const brandName = brand.brandName || brand.brand_name || brand.brand || brand.name || brand.title || "";
       const brandProducts = cleanProducts.filter((product) => {
         const productBrand = String(product.brand || "").trim().toLowerCase();
         const currentBrand = String(brandName || "").trim().toLowerCase();

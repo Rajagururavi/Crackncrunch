@@ -1518,7 +1518,7 @@ export default function HomePage() {
         @media (min-width: 769px) and (max-width: 1024px) {
           .hero-banner {
             height: clamp(240px, 35vw, 360px);
-            margin-top: 80px;
+            margin-top: 104px;
           }
           .category-row, .premium-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1818,7 +1818,7 @@ export default function HomePage() {
           .hero-banner {
             height: auto !important;
             min-height: 0 !important;
-            margin-top: 50px;
+            margin-top: 104px;
           }
           .banner-slider img {
             height: auto !important;

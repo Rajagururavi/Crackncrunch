@@ -95,7 +95,6 @@ export async function POST(request) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-
     return Response.json({
       success: true,
       message: "Category added successfully",
