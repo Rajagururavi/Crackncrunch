@@ -20,6 +20,18 @@ export default function ProductsPage() {
     price: "",
     offerPrice: "",
     stockStatus: "",
+    nutrition: {
+      energy: "",
+      protein: "",
+      carbohydrates: "",
+      sugar: "",
+      totalFat: "",
+      saturatedFat: "",
+      transFat: "",
+      monounsaturatedFattyAcids: "",
+      polyunsaturatedFattyAcids: "",
+      cholesterol: "",
+    },
   });
   const [image1, setImage1] = useState(null);
   const [image2, setImage2] = useState(null);
@@ -118,6 +130,18 @@ export default function ProductsPage() {
       price: "",
       offerPrice: "",
       stockStatus: "",
+      nutrition: {
+        energy: "",
+        protein: "",
+        carbohydrates: "",
+        sugar: "",
+        totalFat: "",
+        saturatedFat: "",
+        transFat: "",
+        monounsaturatedFattyAcids: "",
+        polyunsaturatedFattyAcids: "",
+        cholesterol: "",
+      },
     });
     setImage1(null);
     setImage2(null);
@@ -163,8 +187,27 @@ export default function ProductsPage() {
       price: product.price ?? "",
       offerPrice: product.offerPrice ?? "",
       stockStatus: product.stockStatus || "",
+      nutrition: {
+        energy: product.nutrition?.energy ?? "",
+        protein: product.nutrition?.protein ?? "",
+        carbohydrates: product.nutrition?.carbohydrates ?? "",
+        sugar: product.nutrition?.sugar ?? "",
+        totalFat: product.nutrition?.totalFat ?? "",
+        saturatedFat: product.nutrition?.saturatedFat ?? "",
+        transFat: product.nutrition?.transFat ?? "",
+        monounsaturatedFattyAcids:
+        product.nutrition?.monounsaturatedFattyAcids ?? "",
+        polyunsaturatedFattyAcids: product.nutrition?.polyunsaturatedFattyAcids ?? "",
+        cholesterol: product.nutrition?.cholesterol ?? "",
+      },
     });
-    const images = Array.isArray(product.images) ? product.images : [product.image || product.imageUrl || product.image_url].filter(Boolean);
+    const images = Array.isArray(product.images)
+      ? product.images
+      : [
+          product.image ||
+          product.imageUrl ||
+          product.image_url,
+        ].filter(Boolean);
     setPreview1(images[0] || "");
     setPreview2(images[1] || "");
     setPreview3(images[2] || "");
@@ -185,6 +228,16 @@ export default function ProductsPage() {
     setForm((previous) => ({
       ...previous,
       [name]: value,
+    }));
+  }
+  function handleNutritionChange(event) {
+    const { name, value } = event.target;
+    setForm((previous) => ({
+      ...previous,
+      nutrition: {
+        ...previous.nutrition,
+        [name]: value,
+      },
     }));
   }
   function handleImageChange(event, setImage, setPreview, oldPreview) {
@@ -244,6 +297,7 @@ export default function ProductsPage() {
       formData.append("price", String(form.price));
       formData.append("offerPrice", String(form.offerPrice));
       formData.append("stockStatus", form.stockStatus);
+      formData.append("nutrition", JSON.stringify(form.nutrition));
       if (image1) formData.append("image1", image1);
       if (image2) formData.append("image2", image2);
       if (image3) formData.append("image3", image3);
@@ -334,7 +388,7 @@ export default function ProductsPage() {
     return getBrandValue(product.brand);
   }
   function getStockClass(status) {
-    return /available/i.test(status || "") && !/unavailable|out of stock|sold out/i.test(status || "") ? "available" : "unavailable";
+    return /available/i.test(status || "") && !/unavailable|out of stock|sold out/i.test(status || "")? "available": "unavailable";
   }
   return (
     <>
@@ -628,11 +682,34 @@ export default function ProductsPage() {
           resize: vertical;
           font-family: inherit;
         }
-        price-grid {
+        .price-grid {
           grid-column: 1 / -1;
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 20px;
+        }
+        .nutrition-section {
+          grid-column: 1 / -1;
+          padding: 20px;
+          background: #fafafa;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+        }
+        .nutrition-title {
+          margin: 0 0 6px;
+          color: #222;
+          font-size: 16px;
+          font-weight: 700;
+        }
+        .nutrition-description {
+          margin: 0 0 18px;
+          color: #777;
+          font-size: 12px;
+        }
+        .nutrition-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
         }
         .images-title {
           grid-column: 1 / -1;
@@ -830,7 +907,7 @@ export default function ProductsPage() {
             min-width: 0;
             table-layout: fixed;
           }
-          th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(8),
+          th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(8), 
           td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(8) {
             display: none;
           }
@@ -919,12 +996,18 @@ export default function ProductsPage() {
             grid-template-columns: minmax(0, 1fr);
             gap: 16px;
           }
-          .full, .price-grid, .images-grid, .images-title {
+          .full, .price-grid, .images-grid, .images-title, .nutrition-section {
             grid-column: 1;
           }
           .price-grid, .images-grid {
             grid-template-columns: minmax(0, 1fr);
             gap: 15px;
+          }
+          .nutrition-section {
+            padding: 14px;
+          }
+          .nutrition-grid {
+            grid-template-columns: minmax(0, 1fr);
           }
           .form-group input, .form-group select, .form-group textarea {
             font-size: 14px;
@@ -1016,13 +1099,12 @@ export default function ProductsPage() {
                     <th>Action</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {products.map((product, index) => (
                     <tr key={product._id || product.id || index}>
                       <td>
                         {getImage(product) ? (
-                          <img src={getImage(product)} alt={product.productName || "Product"} className="product-image" />
+                          <img src={getImage(product)} alt={product.productName || "Product"} className="product-image"/>
                         ) : (
                           <div className="no-image">No Image</div>
                         )}
@@ -1033,7 +1115,7 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td>
-                         <span className="keyword-text" title={product.productKeyword || ""}>
+                        <span className="keyword-text" title={product.productKeyword || ""}>
                           {product.productKeyword || "-"}
                         </span>
                       </td>
@@ -1045,11 +1127,12 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td>
-                        {product.offerPrice !== "" && product.offerPrice != null && Number(product.offerPrice) > 0 ? (
-                          <span className="offer-price">
-                            ₹{Number(product.offerPrice).toFixed(2)}
-                          </span>
-                        ) : (
+                        {
+                          product.offerPrice !== "" && product.offerPrice != null && Number(product.offerPrice) > 0 ? (
+                            <span className="offer-price">
+                              ₹{Number(product.offerPrice).toFixed(2)}
+                            </span>
+                          ) : (
                           "-"
                         )}
                       </td>
@@ -1093,7 +1176,9 @@ export default function ProductsPage() {
             </div>
             <div className="modal-body">
               {message && (
-                <div className={`message ${messageType === "success" ? "success" : "error"}`} role="status">
+                <div className={`message ${
+                  messageType === "success" ? "success" : "error"
+                }`} role="status">
                   {message}
                 </div>
               )}
@@ -1147,7 +1232,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="form-group full">
                     <label htmlFor="description">Description</label>
-                    <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Enter product description"/>
+                    <textarea id="description" name="description" value={form.description} onChange={handleChange} placeholder="Enter product description" />
                   </div>
                   <div className="price-grid">
                     <div className="form-group">
@@ -1158,7 +1243,7 @@ export default function ProductsPage() {
                     </div>
                     <div className="form-group">
                       <label htmlFor="offerPrice">Offer Price</label>
-                      <input id="offerPrice" type="number" name="offerPrice" value={form.offerPrice} onChange={handleChange} placeholder="₹ 0.00" min="0" step="0.01" />
+                      <input id="offerPrice" type="number" name="offerPrice" value={form.offerPrice} onChange={handleChange} placeholder="₹ 0.00" min="0" step="0.01"/>
                     </div>
                     <div className="form-group">
                       <label htmlFor="stockStatus">
@@ -1175,16 +1260,94 @@ export default function ProductsPage() {
                       </select>
                     </div>
                   </div>
+                  <div className="nutrition-section">
+                    <h3 className="nutrition-title">
+                      Nutrition Facts
+                    </h3>
+                    <p className="nutrition-description">
+                      Enter nutritional values per 100 g.
+                    </p>
+                    <div className="nutrition-grid">
+                      <div className="form-group">
+                        <label htmlFor="energy">Energy (kcal)</label>
+                        <input id="energy" type="number" name="energy" min="0" step="any" 
+                          value={form.nutrition.energy} onChange={handleNutritionChange} placeholder="Enter energy" 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="protein">Protein (g)</label>
+                        <input id="protein" type="number" name="protein" min="0" step="any" 
+                          value={form.nutrition.protein} onChange={handleNutritionChange} placeholder="Enter protein"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="carbohydrates">
+                          Carbohydrates (g)
+                        </label>
+                        <input id="carbohydrates" type="number" name="carbohydrates" min="0" step="any" 
+                          value={form.nutrition.carbohydrates} onChange={handleNutritionChange} placeholder="Enter carbohydrates" 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="sugar">Sugar (g)</label>
+                        <input id="sugar" type="number" name="sugar" min="0" step="any"
+                          value={form.nutrition.sugar} onChange={handleNutritionChange} placeholder="Enter sugar"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="totalFat">Total Fat (g)</label>
+                        <input id="totalFat" type="number" name="totalFat" min="0" step="any"
+                          value={form.nutrition.totalFat} onChange={handleNutritionChange} placeholder="Enter total fat"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="saturatedFat">
+                          Saturated Fat (g)
+                        </label>
+                        <input id="saturatedFat" type="number" name="saturatedFat" min="0" step="any"
+                          value={form.nutrition.saturatedFat} onChange={handleNutritionChange} placeholder="Enter saturated fat"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="transFat">Trans Fat (g)</label>
+                        <input id="transFat" type="number" name="transFat" min="0" step="any"
+                          value={form.nutrition.transFat} onChange={handleNutritionChange} placeholder="Enter trans fat"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="monounsaturatedFattyAcids">
+                          Monounsaturated Fatty Acids (g)
+                        </label>
+                        <input
+                          id="monounsaturatedFattyAcids" type="number" name="monounsaturatedFattyAcids" min="0" step="any"
+                          value={form.nutrition.monounsaturatedFattyAcids} onChange={handleNutritionChange} placeholder="Enter Monounsaturated Fatty Acids" 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="polyunsaturatedFattyAcids">
+                          Polyunsaturated Fatty Acids (g)
+                        </label>
+                        <input id="polyunsaturatedFattyAcids" type="number" name="polyunsaturatedFattyAcids" min="0" step="any"
+                          value={form.nutrition.polyunsaturatedFattyAcids} onChange={handleNutritionChange} placeholder="Enter Polyunsaturated Fatty Acids"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="cholesterol">
+                          Cholesterol (mg)
+                        </label>
+                        <input id="cholesterol" type="number" name="cholesterol" min="0" step="any"
+                          value={form.nutrition.cholesterol} onChange={handleNutritionChange} placeholder="Enter Cholesterol"
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div className="images-title">Product Images</div>
                   <div className="images-grid">
                     <div className="image-card">
                       <label htmlFor="image1">Image 1</label>
-                      <input id="image1" ref={image1Ref} className="file-input" type="file" accept="image/*" onChange={(event) => handleImageChange(
-                        event,
-                        setImage1,
-                        setPreview1,
-                        preview1
-                      )}/>
+                      <input id="image1" ref={image1Ref} className="file-input" type="file" accept="image/*"
+                        onChange={(event) => handleImageChange(event, setImage1, setPreview1, preview1)}
+                      />
                       <div className="preview">
                         {preview1 ? (
                           <img src={preview1} alt="Product image 1" />
@@ -1197,12 +1360,9 @@ export default function ProductsPage() {
                     </div>
                     <div className="image-card">
                       <label htmlFor="image2">Image 2</label>
-                      <input id="image2" ref={image2Ref} className="file-input" type="file" accept="image/*" onChange={(event) => handleImageChange(
-                        event,
-                        setImage2,
-                        setPreview2,
-                        preview2
-                      )}/>
+                      <input id="image2" ref={image2Ref} className="file-input" type="file" accept="image/*" onChange={(event) =>
+                        handleImageChange(event, setImage2, setPreview2, preview2)
+                      }/>
                       <div className="preview">
                         {preview2 ? (
                           <img src={preview2} alt="Product image 2" />
@@ -1215,12 +1375,9 @@ export default function ProductsPage() {
                     </div>
                     <div className="image-card">
                       <label htmlFor="image3">Image 3</label>
-                      <input id="image3" ref={image3Ref} className="file-input" type="file" accept="image/*" onChange={(event) => handleImageChange(
-                        event,
-                        setImage3,
-                        setPreview3,
-                        preview3
-                      )}/>
+                      <input id="image3" ref={image3Ref} className="file-input" type="file" accept="image/*" onChange={(event) =>
+                        handleImageChange(event, setImage3, setPreview3, preview3)
+                      }/>
                       <div className="preview">
                         {preview3 ? (
                           <img src={preview3} alt="Product image 3" />
@@ -1238,7 +1395,9 @@ export default function ProductsPage() {
                     Cancel
                   </button>
                   <button type="submit" className="save-btn" disabled={loading}>
-                    {loading ? "Saving..." : editingProduct ? "Update Product" : "Add Product"}
+                    {
+                      loading? "Saving...": editingProduct? "Update Product": "Add Product"
+                    }
                   </button>
                 </div>
               </form>
@@ -1251,8 +1410,7 @@ export default function ProductsPage() {
           if (event.target === event.currentTarget) {
             closeDeleteModal();
           }
-          }}
-        >
+        }}>
           <div className="delete-modal">
             <h2>Delete Product?</h2>
             <p>

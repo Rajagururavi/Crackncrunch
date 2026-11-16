@@ -39,6 +39,7 @@ function getImageUrl(image) {
   return `/uploads/products/${image}`;
 }
 export default function ProductPage() {
+  console.log("PRODUCT PAGE LOADED");
   const params = useParams();
   const rawSlug = params?.slug;
   const slug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
@@ -76,6 +77,8 @@ export default function ProductPage() {
           throw new Error(`Failed to load products (${response.status})`);
         }
         const data = await response.json();
+        console.log("API RESPONSE:", data);
+        console.log("ALL PRODUCTS:", data.products || data);
         const products = Array.isArray(data) ? data : Array.isArray(data.products) ? data.products : [];
         const productData = products.find((item) => {
           const itemId = String(item._id || item.id || item.productId || item.product_id || "");
@@ -87,6 +90,7 @@ export default function ProductPage() {
         }
         if (cancelled) return;
         setProduct(productData);
+        console.log("PRODUCT NUTRITION:", productData.nutrition);
         const productImages = Array.isArray(productData.images) ? productData.images.filter(Boolean) : [
           productData.image1,
           productData.image2,
@@ -399,9 +403,11 @@ export default function ProductPage() {
           background: #fff;
         }
         .main-image img {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: contain;
+          object-position: center;
           transition: transform 0.35s ease;
         }
         .main-image:hover img {
@@ -961,9 +967,6 @@ export default function ProductPage() {
           .main-image {
             grid-row: 1;
           }
-          .main-image img {
-            height: 350px;
-          }
           .thumbs {
             grid-row: 2;
             flex-direction: row;
@@ -1008,9 +1011,6 @@ export default function ProductPage() {
             width: calc(100% - 20px);
             margin-top: 90px;
             padding: 13px;
-          }
-          .main-image img {
-            height: 280px;
           }
           .weight-section, .quantity-section {
             align-items: flex-start;
@@ -1207,51 +1207,63 @@ export default function ProductPage() {
         </div>
         {activeTab === "description" && (
           <div className="tab-content">
-            <h3>Health Benefits</h3>
+            <h3 style={{ color: "#000", fontWeight: "bold" }}>
+              Health Benefits
+            </h3>
             <div className="benefits-list">
               <h6>Including nuts in your daily diet may help to:</h6>
-              <h6>Support heart health</h6>
-              <h6>Improve brain function and memory</h6>
-              <h6>Strengthen bones and teeth</h6>
-              <h6>Help manage healthy cholesterol levels</h6>
-              <h6>Support skin and hair health</h6>
-              <h6>Promote sustained energy levels</h6>
+              <ul style={{ listStyleType: "disc", paddingLeft: "25px" }}>
+                <li>Support heart health</li>
+                <li>Improve brain function and memory</li>
+                <li>Strengthen bones and teeth</li>
+                <li>Help manage healthy cholesterol levels</li>
+                <li>Support skin and hair health</li>
+                <li>Promote sustained energy levels</li>
+              </ul>
             </div>
+            <br></br>
             <hr />
-            <h3>Product Specifications</h3>
+            <h3 style={{ color: "#000", fontWeight: "bold" }}>
+              Product Specifications
+            </h3>
             <div className="specification-list">
-              <h6>
-                <strong>Brand Name:</strong>{" "}
-                {product.brand || "CRACK N CRUNCH"}
-              </h6>
-              <h6>
-                <strong>Product Name:</strong> {productName}
-              </h6>
-              <h6>
-                <strong>Grade:</strong> Premium
-              </h6>
-              <h6>
-                <strong>Ingredients:</strong> Refer to the product package
-              </h6>
-              <h6>
-                <strong>Country of Origin:</strong> Refer to the product package
-              </h6>
-              <h6>
-                <strong>Shelf Life:</strong> Refer to the product package
-              </h6>
-              <h6>
-                <strong>Storage:</strong> Store in a cool, dry place.
-              </h6>
-              <h6>
-                <strong>Allergen Information:</strong> Check the product package.
-              </h6>
+              <ul style={{ paddingLeft: "25px" }}>
+                <li>
+                  <strong>Brand Name:</strong>{" "}
+                  {product.brand || "CRACK N CRUNCH"}
+                </li>
+                <li>
+                  <strong>Product Name:</strong> {productName}
+                </li>
+                <li>
+                  <strong>Grade:</strong> Premium
+                </li>
+                <li>
+                  <strong>Ingredients:</strong> Refer to the product package
+                </li>
+                <li>
+                  <strong>Country of Origin:</strong> Refer to the product package
+                </li>
+                <li>
+                  <strong>Shelf Life:</strong> Refer to the product package
+                </li>
+                <li>
+                  <strong>Storage:</strong> Store in a cool, dry place.
+                </li>
+                <li>
+                  <strong>Allergen Information:</strong> Check the product package.
+                </li>
+              </ul>
             </div>
+            <br></br>
             <hr />
-            <h3>Nutrition Facts</h3>
+            <br />
+            <h3 style={{ color: "#000", fontWeight: "bold" }}>Nutrition Facts</h3>
             <p>
-              Approximate values per 100 g. Check your product
-              packaging for verified information.
+              (Approximate values per 100 g. Check your product
+              packaging for verified information.)
             </p>
+            <br />
             <table className="nutrition-table">
               <tbody>
                 <tr>
@@ -1259,17 +1271,20 @@ export default function ProductPage() {
                   <th>Amount</th>
                 </tr>
                 {[
-                  ["Energy (kcal)", "553"],
-                  ["Protein (g)", "18.2"],
-                  ["Carbohydrates (g)", "30.2"],
-                  ["Sugar (g)", "5.9"],
-                  ["Total Fat (g)", "43.9"],
-                  ["Saturated Fat (g)", "7.8"],
-                  ["Trans Fat (g)", "0"],
-                ].map(([name, amount]) => (
-                  <tr key={name}>
+                  ["Energy (kcal)", "energy"],
+                  ["Protein (g)", "protein"],
+                  ["Carbohydrates (g)", "carbohydrates"],
+                  ["Sugar (g)", "sugar"],
+                  ["Total Fat (g)", "totalFat"],
+                  ["Saturated Fat (g)", "saturatedFat"],
+                  ["Trans Fat (g)", "transFat"],
+                  ["Monounsaturated Fatty Acids (g)", "monounsaturatedFattyAcids"],
+                  ["Polyunsaturated Fatty Acids (g)", "polyunsaturatedFattyAcids"],
+                  ["Cholesterol (mg)", "cholesterol"],
+                ].map(([name, field]) => (
+                  <tr key={field}>
                     <td>{name}</td>
-                    <td>{amount}</td>
+                    <td>{product.nutrition?.[field] || "—"}</td>
                   </tr>
                 ))}
               </tbody>

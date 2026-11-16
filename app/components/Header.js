@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 export default function Header() {
   const [loginOpen, setLoginOpen] = useState(false);
+  const loginRef = useRef(null);
   const [passwordShow, setPasswordShow] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -12,6 +13,18 @@ export default function Header() {
   const [contactOpen, setContactOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState([]);
+  const cartCloseTimer = useRef(null);
+  useEffect(() => {
+    if (!cartOpen) return;
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      cartCloseTimer.current = setTimeout(() => {
+        setCartOpen(false);
+      }, 4000);
+    }
+    return () => {
+      clearTimeout(cartCloseTimer.current);
+    };
+  }, [cartOpen]);
   const [fullName, setFullName] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
@@ -177,7 +190,9 @@ export default function Header() {
     };
   }, []);
   const cartCount = cart.reduce((total, item) => total + Number(item.quantity || 0), 0);
-  const cartTotal = cart.reduce((total, item) => total + Number(item.final_price || 0) * Number(item.quantity || 1), 0);
+  const cartTotal = cart.reduce((total, item) => {
+    return total + (Number(item.final_price) || 0);
+  }, 0);
   const removeCartItem = (index) => {
     const updatedCart = cart.filter((_, i) => i !== index);
     setCart(updatedCart);
@@ -205,6 +220,17 @@ export default function Header() {
   const getOfferPrice = (product) => {
     return Number(product?.offerPrice || product?.offer_price || product?.final_price || product?.sale_price || product?.selling_price || 0);
   };
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (loginRef.current && !loginRef.current.contains(event.target)) {
+        setLoginOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   return (
     <>
       <div className="top-navbar">
@@ -225,7 +251,7 @@ export default function Header() {
               </div>
             </div>
           ) : (
-            <div className="login-wrapper">
+            <div className="login-wrapper" ref={loginRef}>
               <a href="#" onClick={(e) => {e.preventDefault(); setLoginOpen(!loginOpen); setLoginMessage("");}}>LOGIN / REGISTER</a>
               <div className={`login-dropdown ${loginOpen ? "show" : "" }`} >
                 <div className="top-links">
@@ -380,110 +406,79 @@ export default function Header() {
           <i className="fa fa-times"></i>
         </div>
         <form className="mobile-search-box" onSubmit={handleSearchSubmit}>
-    <div className="mobile-search-input">
-        <input
-            type="text"
-            value={searchQuery}
-            placeholder="Search Products..."
-            onChange={(e) => searchProducts(e.target.value)}
-            onFocus={() => {
-                if (searchQuery.trim()) {
-                    setSearchOpen(true);
-                }
-            }}
-        />
-
-        <button type="submit">
-            <i className="fa fa-search"></i>
-        </button>
-    </div>
-
-    {searchOpen && searchQuery.trim() && (
-        <div className="mobile-search-results">
-
-            {searchLoading && (
+          <div className="mobile-search-input">
+            <input type="text" value={searchQuery} placeholder="Search Products..." onChange={(e) => searchProducts(e.target.value)} onFocus={() => {
+              if (searchQuery.trim()) {
+                setSearchOpen(true);
+              }
+            }}/>
+            <button type="submit">
+              <i className="fa fa-search"></i>
+            </button>
+          </div>
+          {searchOpen && searchQuery.trim() && (
+            <div className="mobile-search-results">
+              {searchLoading && (
                 <div className="search-message">
-                    Searching...
+                  Searching...
                 </div>
-            )}
-
-            {!searchLoading && searchResults.length === 0 && (
+              )}
+              {!searchLoading && searchResults.length === 0 && (
                 <div className="search-message">
-                    No products found
+                  No products found
                 </div>
-            )}
-
-            {!searchLoading && searchResults.map((product) => {
+              )}
+              {!searchLoading && searchResults.map((product) => {
                 const originalPrice = getOriginalPrice(product);
                 const offerPrice = getOfferPrice(product);
-
-                const hasOffer =
-                    offerPrice > 0 &&
-                    originalPrice > 0 &&
-                    offerPrice < originalPrice;
-
+                const hasOffer = offerPrice > 0 && originalPrice > 0 && offerPrice < originalPrice;
                 return (
-                    <Link
-                        key={product._id}
-                        href={`/shop?search=${encodeURIComponent(searchQuery)}`}
-                        className="search-product"
-                        onClick={() => {
-                            setSearchOpen(false);
-                            setSearchQuery("");
-                            closeMobileMenu();
-                        }}
-                    >
-                        <div className="search-product-image">
-                            {getProductImage(product) && (
-                                <img
-                                    src={getProductImage(product)}
-                                    alt={product.productName || "Product"}
-                                />
-                            )}
+                  <Link key={product._id} href={`/shop?search=${encodeURIComponent(searchQuery)}`} className="search-product" onClick={() => {
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                    closeMobileMenu();
+                  }}>
+                    <div className="search-product-image">
+                      {getProductImage(product) && (
+                        <img src={getProductImage(product)} alt={product.productName || "Product"} />
+                      )}
+                    </div>
+                    <div className="search-product-info">
+                      <div className="search-product-name">
+                        {product.productName || "Product"}
+                      </div>
+                      <div className="search-product-price">
+                        {hasOffer ? (
+                          <>
+                            <span className="old-price">
+                              ₹{originalPrice.toFixed(2)}
+                            </span>
+                            <span className="offer-price">
+                              ₹{offerPrice.toFixed(2)}
+                            </span>
+                          </>
+                          ) : (
+                            <span className="offer-price">
+                              ₹{(offerPrice || originalPrice || 0).toFixed(2)}
+                            </span>
+                          )}
                         </div>
-
-                        <div className="search-product-info">
-                            <div className="search-product-name">
-                                {product.productName || "Product"}
-                            </div>
-
-                            <div className="search-product-price">
-                                {hasOffer ? (
-                                    <>
-                                        <span className="old-price">
-                                            ₹{originalPrice.toFixed(2)}
-                                        </span>
-                                        <span className="offer-price">
-                                            ₹{offerPrice.toFixed(2)}
-                                        </span>
-                                    </>
-                                ) : (
-                                    <span className="offer-price">
-                                        ₹{(offerPrice || originalPrice || 0).toFixed(2)}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </Link>
+                    </div>
+                  </Link>
                 );
-            })}
-
-            {!searchLoading && searchResults.length > 0 && (
-                <Link
-                    href={`/shop?search=${encodeURIComponent(searchQuery)}`}
-                    className="view-all-search"
-                    onClick={() => {
-                        setSearchOpen(false);
-                        setSearchQuery("");
-                        closeMobileMenu();
-                    }}
-                >
+              })}
+              {!searchLoading && searchResults.length > 0 && (
+                <Link href={`/shop?search=${encodeURIComponent(searchQuery)}`} className="view-all-search" onClick={() => {
+                  setSearchOpen(false);
+                  setSearchQuery("");
+                  closeMobileMenu();
+                }}>
                     View all results →
                 </Link>
-            )}
-        </div>
-    )}
-</form>
+              )}
+            </div>
+          )}
+        </form>
         <div className="mobile-links">
           <Link href="/" onClick={closeMobileMenu}>HOME </Link>
           <Link href="/about" onClick={closeMobileMenu}>ABOUTUS</Link>
@@ -543,7 +538,14 @@ export default function Header() {
         </div>
       </div>
       <div className={`cart-overlay ${cartOpen ? "show" : "" }`} onClick={() => setCartOpen(false)}></div>
-      <div className={`cart-popup ${cartOpen ? "show" : "" }`}>
+      <div className={`cart-popup ${cartOpen ? "show" : ""}`} onMouseEnter={() => {
+        clearTimeout(cartCloseTimer.current);
+      }} onMouseLeave={() => {
+        clearTimeout(cartCloseTimer.current);
+        cartCloseTimer.current = setTimeout(() => {
+          setCartOpen(false);
+        }, 4000);
+      }}>
         <div className="cart-header">
           <h3>Shopping Cart</h3>
           <span className="cart-close-btn" onClick={() => setCartOpen(false)}>×</span>
@@ -1738,8 +1740,12 @@ export default function Header() {
             background: #222;
           }
           .cart-popup {
-            width: min(420px, 94vw);
-            max-width: 94vw;
+            width: 250px;
+            max-width: 90vw;
+            right: -500vw;
+          }
+          .cart-popup.show {
+            right: 0;
           }
           .cart-header {
             padding: 18px;
@@ -1814,9 +1820,9 @@ export default function Header() {
             line-height: 16px;
           }
           .cart-popup {
-            width: 100%;
-            max-width: 100%;
-            right: -100%;
+            width: 250px;
+            max-width: 90vw;
+            right: -500vw;
           }
           .cart-popup.show {
             right: 0;
@@ -1895,6 +1901,14 @@ export default function Header() {
           }
           .right-section {
             gap: 8px;
+          }
+          .cart-popup {
+            width: 250px;
+            max-width: 90vw;
+            right: -500px;
+          }
+          .cart-popup.show {
+            right: 0;
           }
           .user-btn {
             width: 29px;
@@ -1977,6 +1991,14 @@ export default function Header() {
             width: 26px;
             height: 30px;
             font-size: 19px;
+          }
+          .cart-popup {
+            width: 250px;
+            max-width: 90vw;
+            right: -500px;
+          }
+          .cart-popup.show {
+            right: 0;
           }
           .menu-toggle {
             width: 29px;
@@ -2093,6 +2115,14 @@ export default function Header() {
           .mobile-links a {
             font-size: 12px;
           }
+          .cart-popup {
+            width: 250px;
+            max-width: 90vw;
+            right: -500px;
+          }
+          .cart-popup.show {
+            right: 0;
+          }
         }
         @media screen and (max-width: 900px) and (orientation: landscape) {
           .top-navbar {
@@ -2118,6 +2148,14 @@ export default function Header() {
           .mobile-links a {
             min-height: 40px;
             padding: 9px 0;
+          }
+          .cart-popup {
+            width: 250px;
+            max-width: 90vw;
+            right: -500px;
+          }
+          .cart-popup.show {
+            right: 0;
           }
         }
       `}</style>

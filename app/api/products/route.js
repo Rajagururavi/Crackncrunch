@@ -66,6 +66,7 @@ export async function GET(request) {
         offerPrice: Number(product.offerPrice || 0),
         stockStatus: product.stockStatus || "",
         description,
+        nutrition: product.nutrition || {},
         images,
         image1: product.image1 || "",
         image2: product.image2 || "",

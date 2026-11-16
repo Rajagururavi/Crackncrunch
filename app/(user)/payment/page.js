@@ -220,10 +220,7 @@ export default function PaymentPage() {
   return (
     <main className="payment-page">
       <section className="terms-banner">
-        <img
-          src="/uploads/Payment.png"
-          alt="Payment banner"
-        />
+        <img src="/uploads/Payment.png" alt="Payment banner" />
         <div className="banner-text">
           <a href="/cart">SHOPPING CART</a>
           <span> » » </span>

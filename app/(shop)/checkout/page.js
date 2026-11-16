@@ -29,14 +29,7 @@ function formatPrice(value) {
   })}`;
 }
 function getItemPrice(item) {
-  return Number(
-    item.final_price ??
-      item.finalPrice ??
-      item.offerPrice ??
-      item.offer_price ??
-      item.price ??
-      0
-  );
+  return Number(item.final_price ?? item.finalPrice ?? item.offerPrice ?? item.offer_price ?? item.price ?? 0);
 }
 function getItemTotal(item) {
   return getItemPrice(item) * Math.max(1, Number(item.quantity) || 1);
@@ -85,7 +78,7 @@ export default function CheckoutPage() {
         state: savedCheckout.state || getUserValue(savedUser, ["state", "userState"]),
         country: savedCheckout.country || getUserValue(savedUser, ["country"]) || "India",
         pincode: savedCheckout.pincode ||
-          getUserValue(savedUser, [
+        getUserValue(savedUser, [
             "pincode",
             "pinCode",
             "postalCode",
@@ -158,7 +151,6 @@ export default function CheckoutPage() {
           email: form.email,
         })
       );
-
       localStorage.setItem(
         "checkoutSummary",
         JSON.stringify({
@@ -167,7 +159,6 @@ export default function CheckoutPage() {
           total,
         })
       );
-
       router.push("/payment");
     } catch (err) {
       console.error("Unable to save checkout details:", err);
@@ -175,13 +166,11 @@ export default function CheckoutPage() {
       setSubmitting(false);
     }
   }
-
   if (loading) {
     return (
       <div className="checkout-loading">
         <span className="checkout-loader" />
         <p>Loading checkout...</p>
-
         <style jsx>{`
           .checkout-loading {
             min-height: 55vh;
@@ -192,7 +181,6 @@ export default function CheckoutPage() {
             gap: 12px;
             color: #555;
           }
-
           .checkout-loader {
             width: 36px;
             height: 36px;
@@ -201,7 +189,6 @@ export default function CheckoutPage() {
             border-radius: 50%;
             animation: checkoutSpin 0.8s linear infinite;
           }
-
           @keyframes checkoutSpin {
             to {
               transform: rotate(360deg);
@@ -211,20 +198,12 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
   return (
     <main className="checkout-page">
-      {/* Banner */}
       <section className="checkout-banner">
-        <img
-          className="checkout-banner-image"
-          src="/uploads/Checkout.png"
-          alt="Checkout banner"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-
+        <img className="checkout-banner-image" src="/uploads/Checkout.png" alt="Checkout banner" onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}/>
         <div className="checkout-banner-overlay">
           <div className="checkout-banner-content">
             <h1>Checkout</h1>
@@ -232,7 +211,6 @@ export default function CheckoutPage() {
           </div>
         </div>
       </section>
-
       <div className="checkout-container">
         <nav className="checkout-breadcrumb" aria-label="Breadcrumb">
           <Link href="/">Home</Link>
@@ -241,18 +219,15 @@ export default function CheckoutPage() {
           <span>/</span>
           <strong>Checkout</strong>
         </nav>
-
         <header className="checkout-title">
           <div>
             <h2>Delivery &amp; Payment</h2>
             <p>Confirm your delivery details before placing your order.</p>
           </div>
-
           <div className="checkout-secure-badge">
             <span>🔒</span> Secure Checkout
           </div>
         </header>
-
         {!cart.length ? (
           <section className="checkout-empty">
             <div className="checkout-empty-icon">🛒</div>
@@ -265,7 +240,6 @@ export default function CheckoutPage() {
         ) : (
           <form className="checkout-layout" onSubmit={handleSubmit}>
             <div className="checkout-main">
-              {/* Delivery details */}
               <section className="checkout-card">
                 <div className="checkout-card-heading">
                   <span className="checkout-step">01</span>
@@ -274,104 +248,48 @@ export default function CheckoutPage() {
                     <p>Edit your address, state and pincode below.</p>
                   </div>
                 </div>
-
                 <div className="checkout-form-grid">
                   <div className="checkout-field">
                     <label htmlFor="fullname">Full Name</label>
-                    <input
-                      id="fullname"
-                      value={form.fullname}
-                      readOnly
-                    />
+                    <input id="fullname" value={form.fullname} readOnly />
                   </div>
-
                   <div className="checkout-field">
                     <label htmlFor="mobile">Mobile Number</label>
-                    <input
-                      id="mobile"
-                      value={form.mobile}
-                      readOnly
-                    />
+                    <input id="mobile" value={form.mobile} readOnly />
                   </div>
-
                   <div className="checkout-field full-width">
                     <label htmlFor="email">Email Address</label>
-                    <input
-                      id="email"
-                      type="email"
-                      value={form.email}
-                      readOnly
-                    />
+                    <input id="email" type="email" value={form.email} readOnly/>
                   </div>
-
                   <div className="checkout-field full-width">
                     <label htmlFor="address">
                       Delivery Address <span>*</span>
                     </label>
-                    <textarea
-                      id="address"
-                      name="address"
-                      value={form.address}
-                      onChange={handleChange}
-                      placeholder="Enter your complete delivery address"
-                      rows={4}
-                      required
-                    />
+                    <textarea id="address" name="address" value={form.address} onChange={handleChange} placeholder="Enter your complete delivery address" rows={4} required/>
                   </div>
-
                   <div className="checkout-field">
                     <label htmlFor="state">
                       State <span>*</span>
                     </label>
-                    <input
-                      id="state"
-                      name="state"
-                      value={form.state}
-                      onChange={handleChange}
-                      placeholder="Enter your state"
-                      required
-                    />
+                    <input id="state" name="state" value={form.state} onChange={handleChange} placeholder="Enter your state" required />
                   </div>
-
                   <div className="checkout-field">
                     <label htmlFor="pincode">
                       Pincode <span>*</span>
                     </label>
-                    <input
-                      id="pincode"
-                      name="pincode"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="postal-code"
-                      value={form.pincode}
-                      onChange={(event) => {
-                        const value = event.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 6);
-
-                        setForm((previous) => ({
-                          ...previous,
-                          pincode: value,
-                        }));
-
-                        setError("");
-                      }}
-                      maxLength={6}
-                      placeholder="6-digit pincode"
-                      required
-                    />
+                    <input id="pincode" name="pincode" type="text" inputMode="numeric" autoComplete="postal-code" value={form.pincode} onChange={(event) => {
+                      const value = event.target.value.replace(/\D/g, "").slice(0, 6);
+                      setForm((previous) => ({
+                        ...previous, pincode: value,
+                      }));
+                      setError("");
+                    }} maxLength={6} placeholder="6-digit pincode" required/>
                   </div>
-
                   <div className="checkout-field full-width">
                     <label htmlFor="country">Country</label>
-                    <input
-                      id="country"
-                      value={form.country}
-                      readOnly
-                    />
+                    <input id="country" value={form.country} readOnly />
                   </div>
                 </div>
-
                 <div className="checkout-info">
                   <span>ⓘ</span>
                   <p>
@@ -380,8 +298,6 @@ export default function CheckoutPage() {
                   </p>
                 </div>
               </section>
-
-              {/* Cart items */}
               <section className="checkout-card">
                 <div className="checkout-card-heading">
                   <span className="checkout-step">02</span>
@@ -390,45 +306,23 @@ export default function CheckoutPage() {
                     <p>{cart.length} item(s) in your cart</p>
                   </div>
                 </div>
-
                 <div className="checkout-items">
                   {cart.map((item, index) => {
-                    const name =
-                      item.product_title ||
-                      item.productName ||
-                      item.product_name ||
-                      item.name ||
-                      "Product";
-
-                    const image =
-                      item.product_image ||
-                      item.productImage ||
-                      item.image ||
-                      "/uploads/no-image.png";
-
+                    const name = item.product_title || item.productName || item.product_name || item.name || "Product";
+                    const image = item.product_image || item.productImage || item.image || "/uploads/no-image.png";
                     return (
-                      <div
-                        className="checkout-item"
-                        key={`${item.product_id || item._id || item.id || name}-${item.weight || ""}-${index}`}
-                      >
+                      <div className="checkout-item" key={`${item.product_id || item._id || item.id || name} - ${item.weight || ""}-${index}`}>
                         <div className="checkout-item-image">
-                          <img
-                            src={image}
-                            alt={name}
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src =
-                                "/uploads/no-image.png";
-                            }}
-                          />
+                          <img src={image} alt={name} onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = "/uploads/no-image.png";
+                          }}/>
                         </div>
-
                         <div className="checkout-item-details">
                           <h4>{name}</h4>
                           {item.weight && <p>Weight: {item.weight}</p>}
                           <p>Quantity: {Math.max(1, Number(item.quantity) || 1)}</p>
                         </div>
-
                         <strong className="checkout-item-price">
                           {formatPrice(getItemTotal(item))}
                         </strong>
@@ -436,7 +330,6 @@ export default function CheckoutPage() {
                     );
                   })}
                 </div>
-
                 <Link href="/cart" className="checkout-edit-cart">
                   ← Edit Cart
                 </Link>
@@ -467,7 +360,7 @@ export default function CheckoutPage() {
                   <div className="checkout-payment-heading">
                     <div className="checkout-payment-title">
                       <input type="radio" name="paymentMethod" checked readOnly aria-label="Credit Card, Debit Card or NetBanking" />
-                      <span>Credit Card/Debit Card/NetBaning</span>
+                      <span>UPI/Credit Card/Debit Card/NetBaning</span>
                     </div>
                     <img src="https://cdn.razorpay.com/static/assets/logo/rzp_payment_icon.svg" alt="Razorpay" />
                   </div>
