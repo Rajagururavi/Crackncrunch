@@ -32,7 +32,7 @@ function getItemPrice(item) {
   return Number(item.final_price ?? item.finalPrice ?? item.offerPrice ?? item.offer_price ?? item.price ?? 0);
 }
 function getItemTotal(item) {
-  return getItemPrice(item) * Math.max(1, Number(item.quantity) || 1);
+  return getItemPrice(item);
 }
 export default function CheckoutPage() {
   const router = useRouter();

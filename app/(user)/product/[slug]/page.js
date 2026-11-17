@@ -1223,6 +1223,7 @@ export default function ProductPage() {
             </div>
             <br></br>
             <hr />
+            <br></br>
             <h3 style={{ color: "#000", fontWeight: "bold" }}>
               Product Specifications
             </h3>
@@ -1267,8 +1268,8 @@ export default function ProductPage() {
             <table className="nutrition-table">
               <tbody>
                 <tr>
-                  <th>Nutrient</th>
-                  <th>Amount</th>
+                  <th>Nutrition Information</th>
+                  <th>(Per 100g)</th>
                 </tr>
                 {[
                   ["Energy (kcal)", "energy"],
