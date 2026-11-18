@@ -763,17 +763,15 @@ export default function HomePage() {
         .hero-banner {
           position: relative;
           width: 100%;
-          height: auto !important;
-          min-height: 0 !important;
-          max-height: none !important;
+          height: 500px;
+          margin-top: 145px;
           overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
         }
         .banner-slider {
           display: flex;
           width: 100%;
-          height: auto !important;
-          min-height: 0 !important;
-          align-items: flex-start;
+          height: 100%;
           transition: transform 1s ease-in-out;
         }
         .banner-slider img {
@@ -781,12 +779,9 @@ export default function HomePage() {
           flex: 0 0 100%;
           width: 100%;
           min-width: 100%;
-          max-width: 100%;
-          height: auto !important;
-          min-height: 0 !important;
-          max-height: none !important;
-          object-fit: contain !important;
-          object-position: center center !important;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
         }
         .slider-btn {
           position: absolute;
@@ -1960,36 +1955,6 @@ export default function HomePage() {
           }
           .brand-carousel-next { 
             right: -5px; 
-          }
-        }
-        @media (min-width: 1400px) {
-          .hero-banner {
-            margin-top: 145px;
-          }
-        }
-        @media (min-width: 1025px) and (max-width: 1399px) {
-          .hero-banner {
-            margin-top: 145px;
-          }
-        }
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .hero-banner {
-            margin-top: 104px;
-          }
-        }
-        @media (max-width: 768px) {
-          .hero-banner {
-            margin-top: 104px;
-          }
-        }
-        @media (max-width: 480px) {
-          .hero-banner {
-            margin-top: 55px;
-          }
-        }
-        @media (max-width: 359px) {
-          .hero-banner {
-            margin-top: 104px;
           }
         }
       `}</style>
