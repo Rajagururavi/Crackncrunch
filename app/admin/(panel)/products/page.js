@@ -20,6 +20,7 @@ export default function ProductsPage() {
     price: "",
     offerPrice: "",
     stockStatus: "",
+    healthBenefits: [""],
     nutrition: {
       energy: "",
       protein: "",
@@ -130,6 +131,7 @@ export default function ProductsPage() {
       price: "",
       offerPrice: "",
       stockStatus: "",
+      healthBenefits: [""],
       nutrition: {
         energy: "",
         protein: "",
@@ -187,6 +189,9 @@ export default function ProductsPage() {
       price: product.price ?? "",
       offerPrice: product.offerPrice ?? "",
       stockStatus: product.stockStatus || "",
+      healthBenefits: Array.isArray(product.healthBenefits)
+        ? (product.healthBenefits.length > 0 ? product.healthBenefits : [""])
+        : [""],
       nutrition: {
         energy: product.nutrition?.energy ?? "",
         protein: product.nutrition?.protein ?? "",
@@ -238,6 +243,32 @@ export default function ProductsPage() {
         ...previous.nutrition,
         [name]: value,
       },
+    }));
+  }
+
+  function handleHealthBenefitChange(index, value) {
+    setForm((previous) => ({
+      ...previous,
+      healthBenefits: previous.healthBenefits.map((benefit, benefitIndex) =>
+        benefitIndex === index ? value : benefit
+      ),
+    }));
+  }
+
+  function addHealthBenefit() {
+    setForm((previous) => ({
+      ...previous,
+      healthBenefits: [...previous.healthBenefits, ""],
+    }));
+  }
+
+  function removeHealthBenefit(index) {
+    setForm((previous) => ({
+      ...previous,
+      healthBenefits:
+        previous.healthBenefits.length <= 1
+          ? [""]
+          : previous.healthBenefits.filter((_, benefitIndex) => benefitIndex !== index),
     }));
   }
   function handleImageChange(event, setImage, setPreview, oldPreview) {
@@ -297,6 +328,12 @@ export default function ProductsPage() {
       formData.append("price", String(form.price));
       formData.append("offerPrice", String(form.offerPrice));
       formData.append("stockStatus", form.stockStatus);
+      formData.append(
+        "healthBenefits",
+        JSON.stringify(
+          form.healthBenefits.map((benefit) => benefit.trim()).filter(Boolean)
+        )
+      );
       formData.append("nutrition", JSON.stringify(form.nutrition));
       if (image1) formData.append("image1", image1);
       if (image2) formData.append("image2", image2);
@@ -695,6 +732,48 @@ export default function ProductsPage() {
           border: 1px solid #e5e5e5;
           border-radius: 10px;
         }
+        .benefits-section {
+          grid-column: 1 / -1;
+          padding: 20px;
+          background: #fafafa;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+        }
+        .benefit-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+        .benefit-row input {
+          flex: 1;
+          min-width: 0;
+        }
+        .remove-benefit-btn {
+          flex-shrink: 0;
+          width: 42px;
+          height: 43px;
+          border: 1px solid #f2c5c5;
+          border-radius: 7px;
+          background: #fff0f0;
+          color: #c62828;
+          font-size: 20px;
+          cursor: pointer;
+        }
+        .add-benefit-btn {
+          min-height: 40px;
+          padding: 9px 14px;
+          border: 1px solid #222;
+          border-radius: 7px;
+          background: #fff;
+          color: #222;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .add-benefit-btn:hover {
+          background: #f1f1f1;
+        }
         .nutrition-title {
           margin: 0 0 6px;
           color: #222;
@@ -996,7 +1075,7 @@ export default function ProductsPage() {
             grid-template-columns: minmax(0, 1fr);
             gap: 16px;
           }
-          .full, .price-grid, .images-grid, .images-title, .nutrition-section {
+          .full, .price-grid, .images-grid, .images-title, .nutrition-section, .benefits-section {
             grid-column: 1;
           }
           .price-grid, .images-grid {
@@ -1259,6 +1338,25 @@ export default function ProductsPage() {
                         </option>
                       </select>
                     </div>
+                  </div>
+                  <div className="benefits-section">
+                    <h3 className="nutrition-title">Health Benefits</h3>
+                    <p className="nutrition-description">
+                      Add the health benefits for this product. These will appear
+                      in the product page description.
+                    </p>
+                    {form.healthBenefits.map((benefit, index) => (
+                      <div className="benefit-row" key={index}>
+                        <input type="text" value={benefit} onChange={(event) => handleHealthBenefitChange(index, event.target.value)
+                        } placeholder={`Enter health benefit ${index + 1}`} aria-label={`Health benefit ${index + 1}`} style={{ color: "#000000" }}/>
+                        <button type="button" className="remove-benefit-btn" onClick={() => removeHealthBenefit(index)} aria-label={`Remove health benefit ${index + 1}`} title="Remove benefit">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className="add-benefit-btn" onClick={addHealthBenefit}>
+                      + Add Another Benefit
+                    </button>
                   </div>
                   <div className="nutrition-section">
                     <h3 className="nutrition-title">

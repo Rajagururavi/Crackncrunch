@@ -10,30 +10,10 @@ export async function GET(request) {
     const filter = {};
     if (search) {
       filter.$or = [
-        {
-          productName: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          productKeyword: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          category: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          brand: {
-            $regex: search,
-            $options: "i",
-          },
-        },
+        { productName: { $regex: search, $options: "i" } },
+        { productKeyword: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+        { brand: { $regex: search, $options: "i" } },
       ];
     }
     if (category) {
@@ -46,7 +26,8 @@ export async function GET(request) {
     const result = products.map((product) => {
       let images = [];
       if (Array.isArray(product.images)) {
-        images = product.images.filter((image) => typeof image === "string" && image.trim() !== "");
+        images = product.images.filter(
+          (image) => typeof image === "string" && image.trim() !== "");
       }
       if (images.length === 0) {
         images = [
@@ -67,6 +48,7 @@ export async function GET(request) {
         stockStatus: product.stockStatus || "",
         description,
         nutrition: product.nutrition || {},
+        healthBenefits: Array.isArray(product.healthBenefits)? product.healthBenefits: [],
         images,
         image1: product.image1 || "",
         image2: product.image2 || "",

@@ -27,6 +27,17 @@ function parseNutrition(formData, fallback = {}) {
     cholesterol: String(parsed.cholesterol ?? "").trim(),
   };
 }
+function parseHealthBenefits(formData, fallback = []) {
+  const rawBenefits = formData.get("healthBenefits");
+  if (rawBenefits === null) {
+    return fallback;
+  }
+  const parsed = JSON.parse(rawBenefits);
+  if (!Array.isArray(parsed)) {
+    throw new Error("Invalid health benefits data");
+  }
+  return parsed.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean);
+}
 async function saveImage(image) {
   if (!image || typeof image === "string" || image.size === 0) {
     return null;
@@ -52,8 +63,6 @@ export async function GET() {
   try {
     const db = await getDatabase();
     const products = await db.collection("products").find({}).sort({ createdAt: -1 }).toArray();
-    const wholeCashews = products.find((item) => item.productName === "Whole Cashews");
-    console.log("API NUTRITION CHECK:", wholeCashews?.nutrition);
     return Response.json({
       success: true,
       products,
@@ -95,15 +104,33 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    let healthBenefits;
+    try {
+      healthBenefits = parseHealthBenefits(formData);
+    } catch (error) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid health benefits data",
+        },
+        { status: 400 }
+      );
+    }
     if (!productName || !productName.trim()) {
       return Response.json(
-        { success: false, message: "Product name is required" },
+        {
+          success: false,
+          message: "Product name is required",
+        },
         { status: 400 }
       );
     }
     if (!Number.isFinite(price) || price < 0) {
       return Response.json(
-        { success: false, message: "Valid price is required" },
+        {
+          success: false,
+          message: "Valid price is required",
+        },
         { status: 400 }
       );
     }
@@ -127,6 +154,7 @@ export async function POST(request) {
       offerPrice,
       stockStatus,
       nutrition,
+      healthBenefits,
       images,
       image1: images[0] || "",
       image2: images[1] || "",
@@ -146,7 +174,10 @@ export async function POST(request) {
   } catch (error) {
     console.error("ADD PRODUCT ERROR:", error);
     return Response.json(
-      { success: false, message: "Failed to add product" },
+      {
+        success: false,
+        message: "Failed to add product",
+      },
       { status: 500 }
     );
   }
@@ -157,7 +188,10 @@ export async function PUT(request) {
     const productId = formData.get("productId");
     if (!productId || !ObjectId.isValid(productId)) {
       return Response.json(
-        { success: false, message: "Valid product ID is required" },
+        {
+          success: false,
+          message: "Valid product ID is required",
+        },
         { status: 400 }
       );
     }
@@ -168,7 +202,10 @@ export async function PUT(request) {
     });
     if (!existingProduct) {
       return Response.json(
-        { success: false, message: "Product not found" },
+        {
+          success: false,
+          message: "Product not found",
+        },
         { status: 404 }
       );
     }
@@ -192,15 +229,33 @@ export async function PUT(request) {
         { status: 400 }
       );
     }
+    let healthBenefits;
+    try {
+      healthBenefits = parseHealthBenefits(formData, existingProduct.healthBenefits || []);
+    } catch (error) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid health benefits data",
+        },
+        { status: 400 }
+      );
+    }
     if (!productName || !productName.trim()) {
       return Response.json(
-        { success: false, message: "Product name is required" },
+        {
+          success: false,
+          message: "Product name is required",
+        },
         { status: 400 }
       );
     }
     if (!Number.isFinite(price) || price < 0) {
       return Response.json(
-        { success: false, message: "Valid price is required" },
+        {
+          success: false,
+          message: "Valid price is required",
+        },
         { status: 400 }
       );
     }
@@ -214,6 +269,7 @@ export async function PUT(request) {
       offerPrice,
       stockStatus,
       nutrition,
+      healthBenefits,
       updatedAt: new Date(),
     };
     const imageFields = ["image1", "image2", "image3"];
@@ -238,8 +294,12 @@ export async function PUT(request) {
     updateData.image2 = newImages[1] || "";
     updateData.image3 = newImages[2] || "";
     await collection.updateOne(
-      { _id: new ObjectId(productId) },
-      { $set: updateData }
+      {
+        _id: new ObjectId(productId),
+      },
+      {
+        $set: updateData,
+      }
     );
     return Response.json({
       success: true,
@@ -248,7 +308,10 @@ export async function PUT(request) {
   } catch (error) {
     console.error("UPDATE PRODUCT ERROR:", error);
     return Response.json(
-      { success: false, message: "Failed to update product" },
+      {
+        success: false,
+        message: "Failed to update product",
+      },
       { status: 500 }
     );
   }
@@ -258,7 +321,10 @@ export async function DELETE(request) {
     const { productId } = await request.json();
     if (!productId || !ObjectId.isValid(productId)) {
       return Response.json(
-        { success: false, message: "Valid product ID is required" },
+        {
+          success: false,
+          message: "Valid product ID is required",
+        },
         { status: 400 }
       );
     }
@@ -269,7 +335,10 @@ export async function DELETE(request) {
     });
     if (!product) {
       return Response.json(
-        { success: false, message: "Product not found" },
+        {
+          success: false,
+          message: "Product not found",
+        },
         { status: 404 }
       );
     }
@@ -292,7 +361,10 @@ export async function DELETE(request) {
   } catch (error) {
     console.error("DELETE PRODUCT ERROR:", error);
     return Response.json(
-      { success: false, message: "Failed to delete product" },
+      {
+        success: false,
+        message: "Failed to delete product",
+      },
       { status: 500 }
     );
   }

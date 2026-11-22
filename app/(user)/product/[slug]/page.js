@@ -218,11 +218,7 @@ export default function ProductPage() {
           cart = [];
         }
       }
-      const existingIndex = cart.findIndex(
-        (item) =>
-          String(item.product_id) === productCartId &&
-          String(item.weight) === selectedWeight
-      );
+      const existingIndex = cart.findIndex((item) => String(item.product_id) === productCartId && String(item.weight) === selectedWeight);
       if (existingIndex !== -1) {
         const newQuantity = Number(cart[existingIndex].quantity || 0) + quantity;
         cart[existingIndex].quantity = newQuantity;
@@ -1213,12 +1209,16 @@ export default function ProductPage() {
             <div className="benefits-list">
               <h6>Including nuts in your daily diet may help to:</h6>
               <ul style={{ listStyleType: "disc", paddingLeft: "25px" }}>
-                <li>Support heart health</li>
-                <li>Improve brain function and memory</li>
-                <li>Strengthen bones and teeth</li>
-                <li>Help manage healthy cholesterol levels</li>
-                <li>Support skin and hair health</li>
-                <li>Promote sustained energy levels</li>
+                {Array.isArray(product?.healthBenefits) &&
+                product.healthBenefits.length > 0 ? (
+                  product.healthBenefits.map((benefit, index) => (
+                    <li key={`${index}-${benefit}`}>
+                      {benefit}
+                    </li>
+                  ))
+                ) : (
+                  <li>Health benefits will be updated soon.</li>
+                )}
               </ul>
             </div>
             <br></br>
